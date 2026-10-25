@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Xeque na Esteira: jogo de xadrez para navegador. Peças aleatórias chegam por uma esteira e você defende o rei contra ondas de inimigos.">
+<title>Xeque na Esteira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Mesmos tokens do jogo (jogo.html) */
+:root{
+  --bg:#141824; --panel:#1e2433; --panel-2:#272f42; --line:#343d55;
+  --fg:#ece6d8; --muted:#9aa3b8;
+  --sq-light:#e8d8b8; --sq-dark:#b48a5a; --frame:#4a3826;
+  --danger:#ef5b4f; --safe:#4fb36a; --gold:#f2c14e;
+  --belt:#2a3142; --belt-stripe:#333b50;
+  --display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:16px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+a{color:inherit}
+.wrap{max-width:1040px;margin:0 auto}
+h1,h2,h3{font-family:var(--display);text-transform:uppercase;line-height:.95;margin:0;text-wrap:balance}
+h2{font-weight:800;font-size:clamp(1.8rem,5vw,2.4rem);letter-spacing:.01em}
+h3{font-weight:600;font-size:1.3rem;letter-spacing:.03em}
+.muted{color:var(--muted)}
+
+/* barra do topo */
+.bar{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:var(--display);font-weight:800;font-size:1.35rem;text-transform:uppercase;letter-spacing:.02em}
+.brand i{width:34px;height:34px;display:block}
+.brand i svg{width:100%;height:100%}
+.brand span{color:var(--gold)}
+.acct{display:flex;align-items:center;gap:10px;font-size:.88rem;color:var(--muted)}
+.acct b{color:var(--fg);font-weight:500}
+
+/* botões */
+.btn{font:inherit;font-weight:600;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:10px 20px;border-radius:10px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);text-decoration:none;cursor:pointer;transition:transform .15s,border-color .15s}
+.btn:hover{border-color:var(--muted);transform:translateY(-2px)}
+.btn:disabled{opacity:.5;cursor:default;transform:none}
+.btn.pri{background:var(--gold);color:#241c08;border-color:transparent}
+.btn.sm{min-height:36px;padding:6px 12px;font-weight:500;font-size:.88rem}
+.btn:focus-visible,.tabs button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+/* abertura */
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:40px;align-items:center;padding:28px 0 56px}
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr);gap:32px;padding-top:12px}}
+.eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+.hero h1{font-weight:800;font-size:clamp(3rem,10vw,5.6rem)}
+.hero h1 span{color:var(--gold);display:block}
+.lede{font-size:1.1rem;max-width:44ch;margin:18px 0 26px;color:#d6d0c2}
+.cta{display:flex;gap:10px;flex-wrap:wrap}
+.note{font-size:.88rem;color:var(--muted);margin:12px 0 0;max-width:46ch;min-height:1.4em}
+.note.err{color:var(--danger)}
+
+/* cena ilustrativa */
+.scene{display:flex;flex-direction:column;gap:14px;max-width:460px;width:100%;justify-self:center}
+.frame{background:var(--frame);padding:8px;border-radius:12px;position:relative;box-shadow:0 24px 50px rgba(0,0,0,.35)}
+.board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(5,1fr);aspect-ratio:8/5;border-radius:4px;overflow:hidden;position:relative}
+.sq{position:relative;display:grid;place-items:center}
+.sq.l{background:var(--sq-light)}.sq.d{background:var(--sq-dark)}
+.sq.spawn::before{content:"";position:absolute;inset:0;background:var(--danger);opacity:.16}
+.sq.zone::before{content:"";position:absolute;inset:0;background:var(--safe);opacity:.14}
+.pc{width:92%;height:92%;position:relative;z-index:1;animation:bob 2.4s ease-in-out infinite}
+.pc svg{width:100%;height:100%;display:block;overflow:visible;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
+@keyframes bob{50%{transform:translateY(-5%)}}
+.arrows{position:absolute;inset:8px;width:calc(100% - 16px);height:calc(100% - 16px);pointer-events:none;z-index:2}
+.arrows line{animation:march .6s linear infinite}
+@keyframes march{to{stroke-dashoffset:-.52}}
+.belt{background:repeating-linear-gradient(115deg,var(--belt) 0 14px,var(--belt-stripe) 14px 24px);background-size:200% 100%;border:1px solid var(--line);border-radius:12px;padding:10px 34px;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;position:relative;animation:run 6s linear infinite}
+@keyframes run{to{background-position:-100% 0}}
+.belt::before,.belt::after{content:"";position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:conic-gradient(#5b6585 0 25%,#3a4158 0 50%,#5b6585 0 75%,#3a4158 0);animation:spin 1.2s linear infinite}
+.belt::before{left:9px}.belt::after{right:9px}
+@keyframes spin{to{transform:rotate(-360deg)}}
+.slot{aspect-ratio:1/.82;border-radius:8px;background:var(--sq-light);display:grid;place-items:center}
+.slot svg{width:76%;height:92%;display:block}
+.cap{font-size:.78rem;color:var(--muted);text-align:center;margin:0}
+
+/* seções */
+section{padding:48px 0;border-top:1px solid var(--line)}
+.head{display:flex;justify-content:space-between;align-items:end;gap:16px;flex-wrap:wrap;margin-bottom:24px}
+.head p{margin:0;max-width:52ch}
+.steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;list-style:none;margin:0;padding:0;counter-reset:s}
+@media (max-width:860px){.steps{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:480px){.steps{grid-template-columns:minmax(0,1fr)}}
+.steps li{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:10px;counter-increment:s}
+.steps .ic{width:56px;height:56px;border-radius:10px;background:var(--sq-light);display:grid;place-items:center}
+.steps .ic svg{width:86%;height:86%}
+.steps h3::before{content:counter(s) ". ";color:var(--gold)}
+.steps p{margin:0;color:var(--muted);font-size:.93rem}
+
+.levels{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+@media (max-width:860px){.levels{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.lv{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:6px}
+.lv h3{color:var(--c)}
+.lv small{font-variant-numeric:tabular-nums;color:var(--fg);font-weight:600}
+.lv p{margin:0;color:var(--muted);font-size:.88rem}
+
+.rankbox{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;max-width:640px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.tabs button{font:inherit;font-size:.85rem;cursor:pointer;padding:6px 14px;border-radius:999px;border:1px solid var(--line);background:none;color:var(--muted)}
+.tabs button.on{background:var(--panel-2);border-color:currentColor}
+.rank{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px;font-variant-numeric:tabular-nums}
+.rank li{display:grid;grid-template-columns:32px minmax(0,1fr) auto;gap:10px;align-items:center;padding:9px 12px;border-radius:8px;background:var(--panel-2)}
+.rank .pos{font-family:var(--display);font-weight:800;font-size:1.15rem;color:var(--muted)}
+.rank li:nth-child(1) .pos{color:var(--gold)}
+.rank .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rank .sc{font-weight:600}
+.rank .sc em{font-style:normal;color:var(--gold);margin-left:6px}
+.rank li.empty{display:block;background:none;color:var(--muted);padding:6px 0}
+.rankfoot{font-size:.82rem;color:var(--muted);margin:14px 0 0}
+
+.about{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:32px}
+@media (max-width:860px){.about{grid-template-columns:minmax(0,1fr)}}
+.about p{margin:0 0 12px;color:#d6d0c2;max-width:58ch}
+.tech{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.tech li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.92rem}
+.tech b{font-weight:600}
+.tech span{color:var(--muted)}
+
+footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:.85rem;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="bar">
+    <a class="brand" href="./"><i id="logo" aria-hidden="true"></i>Xeque na <span>Esteira</span></a>
+    <div class="acct" id="acct"></div>
+  </header>
+
+  <main>
+    <div class="hero">
+      <div>
+        <p class="eyebrow">Jogo de xadrez para navegador</p>
+        <h1>Xeque na <span>Esteira</span></h1>
+        <p class="lede">Peças aleatórias chegam por uma esteira. Ondas inimigas descem pelo tabuleiro. Use cada peça do jeito certo e proteja seu rei do xeque-mate.</p>
+        <div class="cta" id="cta"><a class="btn pri" href="jogo.html">Jogar agora</a></div>
+        <p class="note" id="ctaNote" role="status"></p>
+      </div>
+      <div class="scene" aria-hidden="true">
+        <div class="frame">
+          <div class="board" id="board"></div>
+          <svg class="arrows" viewBox="0 0 8 5" preserveAspectRatio="none">
+            <defs><marker id="ah" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="3.2" markerHeight="3.2" orient="auto"><path d="M1 1L9 5L1 9Z" fill="#ef5b4f"/></marker></defs>
+            <line x1="3.5" y1="1.82" x2="3.5" y2="2.18" stroke="#ef5b4f" stroke-width=".09" stroke-linecap="round" stroke-dasharray=".16 .1" marker-end="url(#ah)"/>
+            <line x1="4.64" y1="0.79" x2="5.36" y2="2.21" stroke="#ef5b4f" stroke-width=".09" stroke-linecap="round" stroke-dasharray=".16 .1" marker-end="url(#ah)"/>
+          </svg>
+        </div>
+        <div class="belt" id="belt"></div>
+        <p class="cap">A esteira traz uma peça nova a cada turno. Quando lota, a mais antiga cai.</p>
+      </div>
+    </div>
+
+    <section id="como">
+      <div class="head"><h2>Como jogar</h2><p class="muted">Um turno, uma ação. Todas as peças andam e capturam como no xadrez de verdade.</p></div>
+      <ol class="steps">
+        <li><div class="ic" data-p="p:w"></div><h3>Pegue da esteira</h3><p>Coloque uma peça nova nas 3 fileiras de baixo, ou mova uma peça que já está no tabuleiro.</p></li>
+        <li><div class="ic" data-p="n:w"></div><h3>Mova como no xadrez</h3><p>O cavalo pula em L, o bispo vai na diagonal, a torre em linha reta. O peão que chega ao topo vira rainha.</p></li>
+        <li><div class="ic" data-p="r:b"></div><h3>Leia as setas</h3><p>As setas vermelhas mostram o que os inimigos vão fazer no próximo turno. Antecipe e se defenda.</p></li>
+        <li><div class="ic" data-p="k:w"></div><h3>Salve o rei</h3><p>Você perde só com xeque-mate. Sobreviva às 5 ondas, ou feche as 8 casas da linha vermelha com peças suas para vencer na hora com +1000 pontos.</p></li>
+      </ol>
+    </section>
+
+    <section id="niveis">
+      <div class="head"><h2>Quatro níveis</h2><p class="muted">Quanto mais difícil, maior o multiplicador da pontuação.</p></div>
+      <div class="levels">
+        <div class="lv" style="--c:#4fb36a"><h3>Fácil</h3><small>Pontos ×1</small><p>Inimigos distraídos, mais peças fortes e uma torre extra no início.</p></div>
+        <div class="lv" style="--c:#f2c14e"><h3>Normal</h3><small>Pontos ×1,5</small><p>Inimigos espertos, mas previsíveis. O jogo como foi pensado.</p></div>
+        <div class="lv" style="--c:#f08a3c"><h3>Difícil</h3><small>Pontos ×2</small><p>Ondas maiores, mais inimigos por turno e menos peças fortes.</p></div>
+        <div class="lv" style="--c:#ef5b4f"><h3>Mestre</h3><small>Pontos ×3</small><p>Sem setas de intenção e com esteira menor. Você prevê sozinho.</p></div>
+      </div>
+    </section>
+
+    <section id="ranking">
+      <div class="head"><h2>Ranking</h2><p class="muted" id="rankSub">Os 10 melhores de cada nível.</p></div>
+      <div class="rankbox">
+        <div class="tabs" id="tabs"></div>
+        <ol class="rank" id="rank"><li class="empty">Carregando…</li></ol>
+        <p class="rankfoot" id="rankFoot">Para entrar no ranking, entre com sua conta Google e escolha um apelido no fim da partida. Só o apelido aparece aqui.</p>
+      </div>
+    </section>
+
+    <section id="sobre">
+      <div class="about">
+        <div>
+          <h2 style="margin-bottom:18px">Sobre o projeto</h2>
+          <p>Xeque na Esteira nasceu para ensinar xadrez a adolescentes a partir de 12 anos de um jeito mais leve: em vez de uma partida longa contra um adversário, cada turno é um pequeno problema de defesa, com peças que chegam ao acaso e inimigos que avisam o que vão fazer.</p>
+          <p>As peças comemoram as capturas, os inimigos zoam quando pegam uma peça desprotegida e o jogo sempre explica por que uma jogada não vale. Tudo para aprender errando sem frustração.</p>
+          <p class="muted" style="font-size:.9rem">Privacidade: o ranking guarda só o apelido escolhido e a pontuação. Nome e e-mail da conta não são gravados nem exibidos.</p>
+        </div>
+        <ul class="tech">
+          <li><b>HTML, CSS e JavaScript puros</b> <span>— sem build e sem frameworks.</span></li>
+          <li><b>Personagens em SVG</b> <span>— desenhados no código, com expressões.</span></li>
+          <li><b>Web Audio</b> <span>— efeitos e música gerados na hora, sem arquivos de áudio.</span></li>
+          <li><b>Síntese de voz</b> <span>— falas das peças pelo próprio navegador.</span></li>
+          <li><b>Firebase</b> <span>— login com Google e ranking global no Firestore.</span></li>
+        </ul>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <span>Xeque na Esteira · projeto de portfólio</span>
+    <a href="jogo.html">Ir para o jogo →</a>
+  </footer>
+</div>
+
+<script src="js/pecas.js"></script>
+<script>
+/* Cena ilustrativa: um pedaço do tabuleiro (linhas 0–4) e a esteira. */
+(function(){
+  const P={'0,1':'p:b','0,4':'n:b','0,6':'b:b','1,3':'p:b','3,2':'n:w','3,6':'r:w','4,3':'p:w','4,4':'k:w','4,5':'p:w'};
+  const svg=s=>{const[t,side]=s.split(':');return pieceSVG(t,side)};
+  let h='';
+  for(let r=0;r<5;r++)for(let c=0;c<8;c++){
+    const cls=['sq',(r+c)%2?'d':'l'];if(r===0)cls.push('spawn');if(r>=3)cls.push('zone');
+    const p=P[r+','+c];
+    h+=`<div class="${cls.join(' ')}">${p?`<span class="pc" style="animation-delay:${(-(r*8+c)%7)*.3}s">${svg(p)}</span>`:''}</div>`;
+  }
+  document.getElementById('board').innerHTML=h;
+  document.getElementById('belt').innerHTML=['r','p','b','q','n'].map(t=>`<div class="slot">${pieceSVG(t,'w')}</div>`).join('');
+  document.querySelectorAll('[data-p]').forEach(el=>{el.innerHTML=svg(el.dataset.p)});
+  document.getElementById('logo').innerHTML=pieceSVG('k','w');
+})();
+</script>
+<script type="module">
+import {NET} from './js/rede.js';
+
+const $=id=>document.getElementById(id);
+const LV={facil:['Fácil','#4fb36a'],normal:['Normal','#f2c14e'],dificil:['Difícil','#f08a3c'],mestre:['Mestre','#ef5b4f']};
+let tab='normal';try{const d=localStorage.getItem('xne-diff');if(LV[d])tab=d}catch(e){}
+
+function note(t,err){const n=$('ctaNote');n.textContent=t;n.classList.toggle('err',!!err)}
+async function login(btn){
+  btn.disabled=true;note('Abrindo o login do Google…');
+  try{if(await NET.login())location.href='jogo.html';else{note('Login cancelado. Você pode jogar sem conta.');btn.disabled=false}}
+  catch(e){note(e.message,true);btn.disabled=false}
+}
+
+function syncCta(){
+  const cta=$('cta'),acct=$('acct');
+  if(!NET.enabled){
+    cta.innerHTML='<a class="btn pri" href="jogo.html">Jogar agora</a>';
+    note('O ranking global não está ativo nesta cópia: os recordes ficam só neste aparelho.');
+    acct.innerHTML='';return;
+  }
+  if(NET.user){
+    cta.innerHTML='<a class="btn pri" href="jogo.html">Jogar</a>';
+    note('Você está conectado. No fim de cada partida, sua melhor pontuação pode ir para o ranking.');
+    acct.innerHTML='<span><b>Conectado</b></span><button class="btn sm" type="button" id="out">Sair</button>';
+    $('out').onclick=()=>NET.logout().catch(e=>note(e.message,true));
+  }else{
+    cta.innerHTML='<button class="btn pri" type="button" id="in">Entrar com Google e jogar</button><a class="btn" href="jogo.html">Jogar sem conta</a>';
+    note('Sem conta você joga normalmente, mas a pontuação não vai para o ranking.');
+    acct.innerHTML='<span>Convidado</span><button class="btn sm" type="button" id="in2">Entrar</button>';
+    $('in').onclick=e=>login(e.currentTarget);
+    $('in2').onclick=e=>login(e.currentTarget);
+  }
+}
+
+let req=0;
+async function renderRank(){
+  const list=$('rank'),tabs=$('tabs');
+  tabs.innerHTML=Object.entries(LV).map(([k,[l,c]])=>`<button type="button" data-k="${k}" class="${k===tab?'on':''}" style="${k===tab?'color:'+c:''}" aria-pressed="${k===tab}">${l}</button>`).join('');
+  tabs.querySelectorAll('button').forEach(b=>b.onclick=()=>{tab=b.dataset.k;renderRank()});
+  const empty=t=>{list.innerHTML='';const li=document.createElement('li');li.className='empty';li.textContent=t;list.appendChild(li)};
+  const row=(i,name,score,won)=>{const li=document.createElement('li');li.innerHTML='<span class="pos"></span><span class="nm"></span><span class="sc"></span>';
+    li.children[0].textContent=i+1;li.children[1].textContent=name;li.children[2].textContent=Number(score).toLocaleString('pt-BR');
+    if(won){const s=document.createElement('em');s.textContent='★';s.title='Venceu as 5 ondas';li.children[2].appendChild(s)}return li};
+  if(NET.enabled){
+    $('rankSub').textContent='Os 10 melhores de cada nível, entre todos os jogadores.';
+    empty('Carregando…');const my=++req;
+    try{const rows=await NET.top(tab);if(my!==req)return;
+      if(!rows.length)return empty('Ninguém pontuou neste nível ainda. Seja o primeiro!');
+      list.innerHTML='';rows.forEach((r,i)=>list.appendChild(row(i,String(r.nick),r.score,r.won)));
+    }catch(e){if(my===req)empty('Não foi possível carregar o ranking agora.')}
+  }else{
+    $('rankSub').textContent='Seus recordes neste aparelho.';$('rankFoot').hidden=true;
+    let l=[];try{l=(JSON.parse(localStorage.getItem('xne-best')||'{}')||{})[tab]||[]}catch(e){}
+    if(!l.length)return empty('Termine uma partida neste nível para registrar seu recorde.');
+    list.innerHTML='';l.forEach((e,i)=>list.appendChild(row(i,e.block?`Bloqueio em ${e.turns} turnos`:e.won?`Vitória em ${e.turns} turnos`:`Caiu na onda ${e.waves+1}`,e.score,e.won)));
+  }
+}
+
+NET.onChange(syncCta);
+syncCta();renderRank();
+</script>
+</body>
+</html>

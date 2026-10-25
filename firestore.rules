@@ -1,0 +1,40 @@
+rules_version = '2';
+// Ranking do Xeque na Esteira.
+// Publique em: Console do Firebase > Firestore Database > Regras (ou `firebase deploy --only firestore`).
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // scores/{uid}_{nivel}: a melhor pontuação de cada jogador em cada nível.
+    match /scores/{id} {
+      // Qualquer visitante, logado ou não, pode ver o ranking.
+      allow read: if true;
+
+      // Só quem está logado grava, e só no próprio documento, e só para subir o recorde.
+      allow create, update: if request.auth != null
+        && id == request.auth.uid + '_' + request.resource.data.difficulty
+        && validScore(request.resource.data)
+        && (resource == null || request.resource.data.score > resource.data.score);
+
+      // Ninguém apaga pelo site. Para moderar um apelido, apague pelo console.
+      allow delete: if false;
+    }
+  }
+
+  function validScore(d) {
+    let mult = {'facil': 1, 'normal': 1.5, 'dificil': 2, 'mestre': 3};
+    return d.keys().hasOnly(['uid', 'nick', 'difficulty', 'score', 'turns', 'waves', 'won', 'block', 'at'])
+      && d.keys().hasAll(['uid', 'nick', 'difficulty', 'score', 'turns', 'waves', 'won', 'block', 'at'])
+      && d.uid == request.auth.uid
+      && d.nick is string && d.nick.matches('^[A-Za-zÀ-ÿ0-9_ ]{3,16}$')
+      && d.difficulty in mult
+      && d.score is int && d.score >= 0
+      && d.turns is int && d.turns >= 1 && d.turns <= 2000
+      && d.waves is int && d.waves >= 0 && d.waves <= 5
+      // vitória: passar pelas 5 ondas ou fazer o bloqueio total da linha vermelha
+      && d.won is bool && d.block is bool
+      && (!d.block || d.won) && (!d.won || d.waves == 5 || d.block)
+      // a pontuação precisa ser coerente com o resultado da partida
+      && d.score <= (d.waves * 100 + (d.won ? 1200 : 0) + (d.block ? 1000 : 0) + 5000) * mult[d.difficulty]
+      && d.at == request.time;
+  }
+}
