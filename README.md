@@ -2,7 +2,7 @@
 
 Jogo de xadrez para navegador. Peças aleatórias chegam por uma esteira, ondas de inimigos descem pelo tabuleiro e você precisa proteger o rei do xeque-mate.
 
-O jogo foi feito para ensinar xadrez a adolescentes a partir de 12 anos: cada turno é um pequeno problema de defesa, os inimigos mostram com setas o que vão fazer e o jogo explica por que uma jogada não vale.
+O jogo foi feito para ensinar xadrez a um adolescente de 12 anos: cada turno é um pequeno problema de defesa, os inimigos mostram com setas o que vão fazer e o jogo explica por que uma jogada não vale.
 
 **Jogar:** https://gabrielajacottet.github.io/xeque-na-esteira/
 

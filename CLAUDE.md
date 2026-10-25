@@ -1,6 +1,6 @@
 # Xeque na Esteira
 
-Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças inimigas usando peças aleatórias que chegam por uma esteira. Feito para ensinar xadrez a adolescentes a partir de 12 anos; vai para o portfólio do autor. Publicado no GitHub Pages, com ranking no Firebase.
+Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças inimigas usando peças aleatórias que chegam por uma esteira. Feito para ensinar xadrez a um adolescente de 12 anos; vai para o portfólio do autor. Publicado no GitHub Pages, com ranking no Firebase.
 
 ## Arquivos
 - `index.html` — página inicial (apresentação, login, níveis, ranking).
