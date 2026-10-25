@@ -358,7 +358,7 @@ function wireScore(o){
       try{localStorage.setItem('xne-nick',nick)}catch(x){}
       S.sent=res.saved?'Pontuação enviada! Confira o ranking no painel.':`Seu recorde neste nível continua ${res.best.toLocaleString('pt-BR')}. Só a melhor pontuação vai para o ranking.`;
       f.remove();msg.textContent=S.sent;rankTab=CUR;renderRanking();
-    }catch(x){msg.textContent='Não foi possível enviar agora. Tente de novo em instantes.';msg.classList.add('err');btn.disabled=false}
+    }catch(x){console.error('Envio ao ranking falhou:',x);msg.textContent=x&&x.code==='permission-denied'?'O ranking recusou esta pontuação (permissão negada).':'Não foi possível enviar agora. Tente de novo em instantes.';msg.classList.add('err');btn.disabled=false}
   };
 }
 function waveQueue(i){const q=[...WAVES[i].q];if(i>=1)D().extra.forEach(t=>q.splice(Math.max(0,q.length-1),0,t));return q}
