@@ -48,7 +48,7 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 - Bloqueio total (`function checkBlock`): as 8 casas da linha 0 ocupadas por peças do jogador = vitória imediata, +1000 de bônus (`BLOCK_BONUS`), campo `block` no ranking.
 - Próxima onda começa quando sobram ≤2 inimigos; a última precisa ser zerada.
 - Moedas (40, linhas 3–4, 4 turnos) e diamantes (120, linhas 1–2, 3 turnos, 25% dos sorteios): no máximo um item por vez; chance por turno 25/20/18/15% (fácil→mestre). Jogador pega movendo uma peça até a casa; inimigo que pisa rouba; inimigos não nascem em cima. Valor entra em `S.coins` (× multiplicador).
-- Pontuação: capturas×10 + moedas + 100/onda + 800 vitória + 1000 bloqueio total + bônus de rapidez, × multiplicador do nível, − penalidades de desfazer.
+- Pontuação: capturas×10 − peças perdidas×10 (`S.lost`) + moedas + 100/onda + 800 vitória + 1000 bloqueio total + bônus de rapidez, × multiplicador do nível, − penalidades de desfazer.
 - Desfazer: volta ao início do turno anterior (jogada + resposta inimiga), um nível só; custa 50 × multiplicador (`S.penalty`). Indisponível após o fim da partida. Placar ao vivo pode ficar negativo; a final tem mínimo 0.
 
 ## Estado e decisões

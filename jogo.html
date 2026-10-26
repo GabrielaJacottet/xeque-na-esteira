@@ -98,6 +98,7 @@ aside{display:flex;flex-direction:column;gap:14px;min-width:0}
 @keyframes loss{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}30%{transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 .loss{text-align:center;line-height:1}
 .loss small{display:block;margin-top:6px;font:600 clamp(.8rem,2.6vw,1rem)/1.2 var(--body);color:#ffd9d4}
+.loss.gain{color:var(--gold);text-shadow:0 3px 0 rgba(0,0,0,.55),0 0 24px rgba(242,193,78,.5)}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 button.b{font:inherit;font-weight:500;border-radius:8px;padding:9px 14px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);cursor:pointer}
 button.b:hover:not(:disabled){border-color:var(--muted)}
@@ -269,7 +270,7 @@ ol.how b{color:var(--fg);font-weight:500}
           <li>Toda peça move e captura <b>como no xadrez</b>.</li>
           <li>As <b>setas vermelhas</b> mostram o que os inimigos vão fazer.</li>
           <li>Um peão seu que chega ao topo vira rainha. Um peão inimigo que chega ao fundo também.</li>
-          <li>Pontuação: valor das capturas ×10, +100 por onda, +800 pela vitória, +1000 pelo bloqueio total e bônus por vencer rápido, multiplicado pelo nível (Fácil ×1, Normal ×1,5, Difícil ×2, Mestre ×3).</li>
+          <li>Pontuação: valor das capturas ×10, menos o valor das peças que você perder (×10), +100 por onda, +800 pela vitória, +1000 pelo bloqueio total e bônus por vencer rápido, multiplicado pelo nível (Fácil ×1, Normal ×1,5, Difícil ×2, Mestre ×3).</li>
           <li>Você perde com <b>xeque-mate</b> e vence ao derrotar a 5ª onda. A próxima onda começa quando sobram 2 inimigos ou menos.</li>
           <li><b>Bloqueio total:</b> ocupe as 8 casas da linha vermelha com peças suas e vença na hora, com +1000 pontos.</li>
           <li><b>Desfazer</b> volta sua última jogada e a resposta dos inimigos, mas custa pontos (50 × o multiplicador do nível).</li>
@@ -325,7 +326,7 @@ const BLOCK_BONUS=1000,UNDO_COST=50;
 const undoCost=()=>Math.round(UNDO_COST*(MULT[CUR]||1));
 function wavesDone(){return S.phase==='won'&&!S.block?WAVES.length:S.wave}
 /* Durante a partida, mostra o que valeria se o jogo terminasse agora (sem bônus de vitória). */
-function liveScore(){const won=S.phase==='won';return Math.round((S.pts*10+(S.coins||0)+wavesDone()*100+(won?800+Math.max(0,400-S.turn*4):0)+(S.block?BLOCK_BONUS:0))*(MULT[CUR]||1))-(S.penalty||0)}
+function liveScore(){const won=S.phase==='won';return Math.round((S.pts*10+(S.coins||0)-(S.lost||0)+wavesDone()*100+(won?800+Math.max(0,400-S.turn*4):0)+(S.block?BLOCK_BONUS:0))*(MULT[CUR]||1))-(S.penalty||0)}
 function finalScore(){return Math.max(0,liveScore())}
 function loadBest(){try{return JSON.parse(localStorage.getItem('xne-best')||'{}')||{}}catch(e){return{}}}
 function saveLocal(e){const all=loadBest(),l=all[CUR]||[],prev=l[0]?l[0].score:-1;l.push(e);l.sort((a,b)=>b.score-a.score);all[CUR]=l.slice(0,5);try{localStorage.setItem('xne-best',JSON.stringify(all))}catch(x){}return e.score>prev&&e.score>0}
@@ -552,7 +553,7 @@ const FOE={p:'O peão inimigo',n:'O cavalo inimigo',b:'O bispo inimigo',r:'A tor
 function taunt(atkT,capT,r,c,tip){
   const V=VOX[atkT]||VOX.p;let line=pick(V.lines),trans='';
   if(Array.isArray(line)){trans=line[1];line=line[0]}
-  const msg=V.silent?`${FOE[atkT]} capturou seu ${NAME[capT]} e relinchou de tanto rir. ${tip}`:`${FOE[atkT]||'O inimigo'} capturou seu ${NAME[capT]}: “${line}”${trans?` (em latim: ${trans})`:''}. ${tip}`;
+  const msg=V.silent?`${FOE[atkT]} capturou ${MINE[capT].toLowerCase()} e relinchou de tanto rir. ${tip}`:`${FOE[atkT]||'O inimigo'} capturou ${MINE[capT].toLowerCase()}: “${line}”${trans?` (em latim: ${trans})`:''}. ${tip}`;
   S.tmsg=msg;S.note=msg;
   setTimeout(()=>{
     popText(r,c,V.ono,'#fff3c4');
@@ -697,21 +698,23 @@ function checkBlock(){
   return true;
 }
 /* Desfazer: volta ao início do turno anterior (sua jogada + resposta dos inimigos), custando pontos. */
-const snap=()=>JSON.parse(JSON.stringify({board:S.board,belt:S.belt,wave:S.wave,queue:S.queue,waveLen:S.waveLen,turn:S.turn,caps:S.caps,pts:S.pts,nid:S.nid,plan:S.plan,msg:S.msg,taunter:S.taunter||null,item:S.item||null,coins:S.coins||0,got:S.got||0}));
+const snap=()=>JSON.parse(JSON.stringify({board:S.board,belt:S.belt,wave:S.wave,queue:S.queue,waveLen:S.waveLen,turn:S.turn,caps:S.caps,pts:S.pts,nid:S.nid,plan:S.plan,msg:S.msg,taunter:S.taunter||null,item:S.item||null,coins:S.coins||0,got:S.got||0,lost:S.lost||0}));
 function undo(){
   if(S.phase!=='player'||busy||!S.undo)return;
   const cost=undoCost(),wave=S.wave,before=liveScore();
   Object.assign(S,S.undo);S.undo=null;S.turnStart=snap();
-  const back=before-liveScore();  // pontos que a jogada desfeita tinha dado (capturas, moedas, onda)
+  const back=before-liveScore();  // saldo do turno desfeito: + capturas, moedas, onda; − peças perdidas
   S.penalty=(S.penalty||0)+cost;S.undos=(S.undos||0)+1;
   S.sel=null;S.targets=[];S.note=null;S.dance=null;S.cheer=0;S.cheerW=0;
   try{fxEl().innerHTML='';speechSynthesis.cancel()}catch(e){}
   if(S.wave!==wave)mSetWave(S.wave);M.danger=inCheck(S.board);
-  S.msg=back>0
-    ?`Jogada desfeita: os ${back} pontos que ela tinha dado foram devolvidos, e a penalidade foi de ${cost}. Sua pontuação foi de ${before} para ${liveScore()}.`
-    :`Jogada desfeita: penalidade de ${cost} pontos. Sua pontuação foi de ${before} para ${liveScore()}.`;
-  S.bad=true;S.lossAnim=true;sfx('undo');
-  spawnFx('loss','',`−${cost+back}${back>0?`<small>−${back} da jogada · −${cost} de penalidade</small>`:''}`,1800);
+  const after=liveScore(),net=after-before,parts=[];
+  if(back>0)parts.push(`−${back} da jogada`);
+  if(back<0)parts.push(`+${-back} da peça recuperada`);
+  parts.push(`−${cost} de penalidade`);
+  S.msg=`Jogada desfeita: ${back>0?`os ${back} pontos que ela tinha dado foram devolvidos e você `:back<0?`você recuperou os ${-back} pontos da peça perdida, mas `:'você '}pagou ${cost} de penalidade. Sua pontuação foi de ${before} para ${after}.`;
+  S.bad=true;S.lossAnim=net<0;sfx('undo');
+  spawnFx('loss'+(net>0?' gain':''),'',`${net>0?"+":net<0?"−":"±"}${Math.abs(net)}${parts.length>1?`<small>${parts.join(' · ')}</small>`:''}`,1800);
   render();
 }
 
@@ -810,7 +813,12 @@ async function enemyTurn(){
       taunt(atkT,cap.t,to[0],to[1],tip);
     }
     animMove(r,c,to[0],to[1],atkT,'b');
-    if(cap){S.msg=S.tmsg||`O inimigo capturou seu ${NAME[cap.t]}.`;S.tmsg=null;sfx('hurt');shake();setTimeout(()=>{burst(to[0],to[1],['#f8f3e7','#ef5b4f','#c9b48e']);popText(to[0],to[1],'−'+NAME[cap.t],'#ef5b4f')},200)}
+    if(cap){
+      /* Perder uma peça custa o mesmo que capturá-la valeria (valor ×10, × multiplicador do nível). */
+      const lp=Math.round(VAL[cap.t]*10*(MULT[CUR]||1));S.lost=(S.lost||0)+VAL[cap.t]*10;S.lossAnim=true;
+      S.msg=`Você perdeu ${lp} pontos! ${S.tmsg||`O inimigo capturou ${MINE[cap.t].toLowerCase()}.`}`;if(S.tmsg&&S.note===S.tmsg)S.note=S.msg;S.tmsg=null;
+      sfx('hurt');shake();setTimeout(()=>{burst(to[0],to[1],['#f8f3e7','#ef5b4f','#c9b48e']);popText(to[0],to[1],`−${lp} (${NAME[cap.t]})`,'#ef5b4f')},200);
+    }
     else sfx('enemy');
     if(stole){S.msg=stole;S.note=S.note||stole}
     if(wasP&&S.board[to[0]][to[1]].t==='q'){S.msg='Um peão inimigo virou rainha!';setTimeout(()=>{burst(to[0],to[1],['#7a1626','#ef5b4f']);sfx('promo')},250)}
