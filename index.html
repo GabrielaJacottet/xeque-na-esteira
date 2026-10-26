@@ -124,6 +124,17 @@ section{padding:48px 0;border-top:1px solid var(--line)}
 .tech b{font-weight:600}
 .tech span{color:var(--muted)}
 
+.fb{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:640px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px}
+@media (max-width:560px){.fb{grid-template-columns:minmax(0,1fr)}}
+.fb label{display:flex;flex-direction:column;gap:6px;font-size:.9rem;font-weight:500}
+.fb .full{grid-column:1/-1}
+.fb input,.fb select,.fb textarea{font:inherit;font-weight:400;width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg)}
+.fb textarea{resize:vertical;min-height:110px}
+.fb input:focus-visible,.fb select:focus-visible,.fb textarea:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.fb .hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
+.fbfoot{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.fbfoot .note{margin:0}
+.note.ok{color:var(--safe)}
 footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:.85rem;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}html{scroll-behavior:auto}}
 </style>
@@ -185,6 +196,31 @@ footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:.85rem;col
         <ol class="rank" id="rank"><li class="empty">Carregando…</li></ol>
         <p class="rankfoot" id="rankFoot">Para entrar no ranking, entre com sua conta Google e escolha um apelido no fim da partida. Só o apelido aparece aqui.</p>
       </div>
+    </section>
+
+    <section id="feedback">
+      <div class="head"><h2>Feedback</h2><p class="muted">Achou um erro, tem uma ideia ou quer elogiar? Conte aqui.</p></div>
+      <form class="fb" id="fbForm">
+        <label>Sobre o quê?
+          <select id="fbTipo">
+            <option>Sugestão</option>
+            <option>Encontrei um erro</option>
+            <option>Elogio</option>
+            <option>Outro assunto</option>
+          </select>
+        </label>
+        <label><span>Apelido <span class="muted">(opcional)</span></span>
+          <input id="fbNick" maxlength="16" autocomplete="off" placeholder="Como quer ser chamado">
+        </label>
+        <label class="full">Mensagem
+          <textarea id="fbMsg" rows="5" maxlength="1000" required placeholder="Escreva aqui…"></textarea>
+        </label>
+        <input type="checkbox" id="fbBot" tabindex="-1" autocomplete="off" aria-hidden="true" class="hp">
+        <div class="full fbfoot">
+          <button class="btn pri" type="submit" id="fbBtn">Enviar feedback</button>
+          <p class="note" id="fbNote" role="status">Não escreva seu nome completo, e-mail, telefone ou endereço.</p>
+        </div>
+      </form>
     </section>
 
     <section id="sobre">
@@ -291,6 +327,24 @@ async function renderRank(){
 
 NET.onChange(syncCta);
 syncCta();renderRank();
+</script>
+<script type="module">
+import {feedbackOn,sendFeedback} from './js/feedback.js';
+const f=document.getElementById('fbForm'),btn=document.getElementById('fbBtn'),note=document.getElementById('fbNote');
+const say=(t,cls)=>{note.textContent=t;note.className='note'+(cls?' '+cls:'')};
+try{document.getElementById('fbNick').value=localStorage.getItem('xne-nick')||''}catch(e){}
+if(!feedbackOn()){btn.disabled=true;say('O envio de feedback ainda não está ativo nesta cópia.')}
+f.onsubmit=async e=>{
+  e.preventDefault();if(!feedbackOn())return;
+  const mensagem=document.getElementById('fbMsg').value.trim();
+  if(mensagem.length<5)return say('Escreva um pouco mais, por favor.','err');
+  btn.disabled=true;say('Enviando…');
+  try{
+    await sendFeedback({tipo:document.getElementById('fbTipo').value,mensagem,apelido:document.getElementById('fbNick').value.trim(),botcheck:document.getElementById('fbBot').checked});
+    document.getElementById('fbMsg').value='';say('Feedback enviado. Obrigado!','ok');
+    setTimeout(()=>{btn.disabled=false},8000);
+  }catch(x){console.error('Feedback falhou:',x);say('Não foi possível enviar agora. Tente de novo em instantes.','err');btn.disabled=false}
+};
 </script>
 </body>
 </html>

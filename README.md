@@ -23,6 +23,7 @@ O jogo foi feito para ensinar xadrez a um adolescente de 12 anos: cada turno é 
 | `js/pecas.js` | Desenho das peças (SVG), usado pelas duas páginas |
 | `js/rede.js` | Login com Google e ranking no Firestore |
 | `js/firebase-config.js` | Configuração do seu projeto Firebase |
+| `js/feedback.js` | Envio do formulário de feedback por e-mail (Web3Forms) |
 | `firestore.rules` | Regras de segurança do ranking |
 | `firestore.indexes.json` | Índice usado pela consulta do ranking |
 
@@ -56,6 +57,15 @@ As chaves de `firebase-config.js` são públicas por natureza e podem ficar no r
 ### Moderação
 
 O ranking mostra só o apelido (3 a 16 caracteres, com filtro de palavrões). Nome e e-mail da conta Google não são gravados. Para remover um apelido, apague o documento em **Firestore** > `scores`.
+
+## Configurar o feedback por e-mail
+
+O formulário de feedback da página inicial envia as mensagens por e-mail usando o [Web3Forms](https://web3forms.com), que é gratuito e não exige servidor. O e-mail de destino fica guardado no Web3Forms e não aparece no código do site.
+
+1. Em [web3forms.com](https://web3forms.com), digite o e-mail que vai receber os feedbacks e peça a chave (*Create Access Key*).
+2. A chave chega por e-mail. Cole-a em `js/feedback.js`, na linha `export const FEEDBACK_KEY='';`.
+
+Sem a chave, o formulário aparece desativado.
 
 ## Publicar no GitHub Pages
 

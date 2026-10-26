@@ -9,7 +9,8 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 - `js/rede.js` — login Google + ranking no Firestore; expõe `NET` (o jogo usa `window.NET`).
 - `js/firebase-config.js` — config do projeto Firebase (vazia = só recordes locais).
 - `firestore.rules`, `firestore.indexes.json`, `firebase.json` — regras e índice do ranking.
-- `README.md` — passo a passo de Firebase e GitHub Pages.
+- `js/feedback.js` — envio de feedback por e-mail via Web3Forms (`FEEDBACK_KEY`; vazio = formulário desativado). Formulário em `index.html#feedback`.
+- `README.md` — passo a passo de Firebase, feedback e GitHub Pages.
 
 ## Para economizar tokens
 - `jogo.html` tem ~68 KB. **Não leia o arquivo inteiro.** Use Grep pelo nome da seção ou função abaixo e leia só o trecho.
@@ -24,6 +25,7 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 | Desenho das peças (SVG) | `js/pecas.js` (`const PAL=`, `function pieceSVG`) |
 | Ondas inimigas | `const WAVES=` |
 | Níveis de dificuldade | `const DIFF=` (fácil, normal, difícil, mestre) |
+| Pontuação ao vivo e desfazer | `function liveScore`, `function undo`, `const snap=`, `UNDO_COST` |
 | Ranking, login e pontuação | `const RK=`, `function syncAcct`, `function scoreBlock`, `function wireScore`, `function finalScore`, `function nickError`; `<script type="module">` no fim |
 | Sons (Web Audio) | `const SFX=`, `function tone`, `function noise` |
 | Música procedural | `/* ---------- música procedural` |
@@ -44,7 +46,8 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 - Derrota só por xeque-mate. Inimigos nunca capturam o rei.
 - Bloqueio total (`function checkBlock`): as 8 casas da linha 0 ocupadas por peças do jogador = vitória imediata, +1000 de bônus (`BLOCK_BONUS`), campo `block` no ranking.
 - Próxima onda começa quando sobram ≤2 inimigos; a última precisa ser zerada.
-- Pontuação: capturas×10 + 100/onda + 800 vitória + 1000 bloqueio total + bônus de rapidez, × multiplicador do nível.
+- Pontuação: capturas×10 + 100/onda + 800 vitória + 1000 bloqueio total + bônus de rapidez, × multiplicador do nível, − penalidades de desfazer.
+- Desfazer: volta ao início do turno anterior (jogada + resposta inimiga), um nível só; custa 50 × multiplicador (`S.penalty`). Indisponível após o fim da partida. Placar ao vivo pode ficar negativo; a final tem mínimo 0.
 
 ## Estado e decisões
 - Estado global em `S` (tabuleiro, esteira, onda, turno, fase: `menu`/`player`/`enemy`/`over`/`won`).
