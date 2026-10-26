@@ -96,6 +96,8 @@ aside{display:flex;flex-direction:column;gap:14px;min-width:0}
 .item.last i{background:var(--danger);border-color:var(--danger);color:#fff}
 .loss{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,10vw,4.4rem);color:var(--danger);text-shadow:0 3px 0 rgba(0,0,0,.55),0 0 24px rgba(239,91,79,.5);white-space:nowrap;z-index:8;animation:loss 1.4s ease-out forwards}
 @keyframes loss{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}30%{transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
+.loss{text-align:center;line-height:1}
+.loss small{display:block;margin-top:6px;font:600 clamp(.8rem,2.6vw,1rem)/1.2 var(--body);color:#ffd9d4}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
 button.b{font:inherit;font-weight:500;border-radius:8px;padding:9px 14px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);cursor:pointer}
 button.b:hover:not(:disabled){border-color:var(--muted)}
@@ -698,14 +700,18 @@ function checkBlock(){
 const snap=()=>JSON.parse(JSON.stringify({board:S.board,belt:S.belt,wave:S.wave,queue:S.queue,waveLen:S.waveLen,turn:S.turn,caps:S.caps,pts:S.pts,nid:S.nid,plan:S.plan,msg:S.msg,taunter:S.taunter||null,item:S.item||null,coins:S.coins||0,got:S.got||0}));
 function undo(){
   if(S.phase!=='player'||busy||!S.undo)return;
-  const cost=undoCost(),wave=S.wave;
+  const cost=undoCost(),wave=S.wave,before=liveScore();
   Object.assign(S,S.undo);S.undo=null;S.turnStart=snap();
+  const back=before-liveScore();  // pontos que a jogada desfeita tinha dado (capturas, moedas, onda)
   S.penalty=(S.penalty||0)+cost;S.undos=(S.undos||0)+1;
   S.sel=null;S.targets=[];S.note=null;S.dance=null;S.cheer=0;S.cheerW=0;
   try{fxEl().innerHTML='';speechSynthesis.cancel()}catch(e){}
   if(S.wave!==wave)mSetWave(S.wave);M.danger=inCheck(S.board);
-  S.msg=`Jogada desfeita: você perdeu ${cost} pontos. Pense bem e tente outra jogada.`;S.bad=true;
-  S.lossAnim=true;sfx('undo');spawnFx('loss','',`−${cost}`,1500);
+  S.msg=back>0
+    ?`Jogada desfeita: os ${back} pontos que ela tinha dado foram devolvidos, e a penalidade foi de ${cost}. Sua pontuação foi de ${before} para ${liveScore()}.`
+    :`Jogada desfeita: penalidade de ${cost} pontos. Sua pontuação foi de ${before} para ${liveScore()}.`;
+  S.bad=true;S.lossAnim=true;sfx('undo');
+  spawnFx('loss','',`−${cost+back}${back>0?`<small>−${back} da jogada · −${cost} de penalidade</small>`:''}`,1800);
   render();
 }
 
