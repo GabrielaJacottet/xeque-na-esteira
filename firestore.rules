@@ -34,7 +34,7 @@ service cloud.firestore {
       && d.won is bool && d.block is bool
       && (!d.block || d.won) && (!d.won || d.waves == 5 || d.block)
       // a pontuação precisa ser coerente com o resultado da partida
-      && d.score <= (d.waves * 100 + (d.won ? 1200 : 0) + (d.block ? 1000 : 0) + 5000) * mult[d.difficulty]
+      && d.score <= (d.waves * 100 + (d.won ? 1200 : 0) + (d.block ? 1000 : 0) + 8000) * mult[d.difficulty]
       && d.at == request.time;
   }
 }

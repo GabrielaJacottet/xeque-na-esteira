@@ -12,6 +12,7 @@ O jogo foi feito para ensinar xadrez a um adolescente de 12 anos: cada turno é 
 - IA dos inimigos que avalia capturas, xeques, avanço e risco, em quatro níveis de dificuldade.
 - Personagens em SVG desenhados no código, com expressões e animações.
 - Efeitos, música procedural e falas das peças gerados pelo navegador (Web Audio e síntese de voz), sem arquivos de áudio.
+- Moedas e diamantes que aparecem ao acaso: mais pontos em troca de expor suas peças.
 - Ranking global com login pelo Google (Firebase). Dá para jogar sem conta; nesse caso a pontuação fica só no aparelho.
 
 ## Estrutura

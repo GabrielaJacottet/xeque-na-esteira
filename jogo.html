@@ -88,6 +88,12 @@ aside{display:flex;flex-direction:column;gap:14px;min-width:0}
 @keyframes up{40%{transform:scale(1.25);color:#fff3c4}}
 .live.hit{animation:hit .9s ease}
 @keyframes hit{0%,50%{color:var(--danger);transform:scale(1.35)}20%{transform:scale(1.2) translateX(-4px)}35%{transform:scale(1.3) translateX(4px)}}
+.item{width:86%;height:86%;position:relative;z-index:1;display:grid;place-items:center;animation:coin 2.2s ease-in-out infinite}
+.item svg{width:100%;height:100%;display:block;filter:drop-shadow(0 3px 0 rgba(0,0,0,.3)) drop-shadow(0 0 8px rgba(242,193,78,.65))}
+.item.gem svg{filter:drop-shadow(0 3px 0 rgba(0,0,0,.3)) drop-shadow(0 0 10px rgba(143,211,255,.8))}
+@keyframes coin{50%{transform:translateY(-8%) scaleX(.8)}}
+.item i{position:absolute;right:-16%;top:-16%;font:700 .62rem/1 var(--body);width:1.7em;height:1.7em;border-radius:50%;display:grid;place-items:center;background:var(--panel);color:var(--fg);border:1px solid var(--gold)}
+.item.last i{background:var(--danger);border-color:var(--danger);color:#fff}
 .loss{position:absolute;left:50%;top:45%;transform:translate(-50%,-50%);font-family:var(--display);font-weight:800;font-size:clamp(2.6rem,10vw,4.4rem);color:var(--danger);text-shadow:0 3px 0 rgba(0,0,0,.55),0 0 24px rgba(239,91,79,.5);white-space:nowrap;z-index:8;animation:loss 1.4s ease-out forwards}
 @keyframes loss{0%{opacity:0;transform:translate(-50%,-50%) scale(.4)}15%{opacity:1;transform:translate(-50%,-50%) scale(1.2)}30%{transform:translate(-50%,-50%) scale(1)}70%{opacity:1}100%{opacity:0;transform:translate(-50%,-150%)}}
 .btns{display:flex;gap:8px;flex-wrap:wrap}
@@ -243,6 +249,7 @@ ol.how b{color:var(--fg);font-weight:500}
         <label class="tg"><input type="checkbox" id="optZoa" checked> Comemorações e zoação (sons e vozes)</label>
         <div class="row"><span class="muted">Dificuldade</span><button class="b" id="diffBtn" type="button" style="padding:5px 12px">Normal</button></div>
         <div class="row"><span class="muted">Peças capturadas</span><span id="caps">0</span></div>
+        <div class="row"><span class="muted">Moedas e diamantes</span><span id="got">0</span></div>
         <div class="row"><span class="muted">Pontuação atual</span><b class="live" id="live">0</b></div>
         <div class="row"><span class="muted">Pontos (valor das capturas)</span><span id="pts" style="color:var(--gold);font-weight:600">0</span></div>
       </div>
@@ -264,6 +271,7 @@ ol.how b{color:var(--fg);font-weight:500}
           <li>Você perde com <b>xeque-mate</b> e vence ao derrotar a 5ª onda. A próxima onda começa quando sobram 2 inimigos ou menos.</li>
           <li><b>Bloqueio total:</b> ocupe as 8 casas da linha vermelha com peças suas e vença na hora, com +1000 pontos.</li>
           <li><b>Desfazer</b> volta sua última jogada e a resposta dos inimigos, mas custa pontos (50 × o multiplicador do nível).</li>
+          <li><b>Moedas e diamantes</b> aparecem às vezes no tabuleiro. Leve uma peça até eles para ganhar pontos antes que sumam, ou que um inimigo roube. O diamante vale mais, mas fica perto dos inimigos.</li>
         </ol>
       </div>
     </aside>
@@ -315,7 +323,7 @@ const BLOCK_BONUS=1000,UNDO_COST=50;
 const undoCost=()=>Math.round(UNDO_COST*(MULT[CUR]||1));
 function wavesDone(){return S.phase==='won'&&!S.block?WAVES.length:S.wave}
 /* Durante a partida, mostra o que valeria se o jogo terminasse agora (sem bônus de vitória). */
-function liveScore(){const won=S.phase==='won';return Math.round((S.pts*10+wavesDone()*100+(won?800+Math.max(0,400-S.turn*4):0)+(S.block?BLOCK_BONUS:0))*(MULT[CUR]||1))-(S.penalty||0)}
+function liveScore(){const won=S.phase==='won';return Math.round((S.pts*10+(S.coins||0)+wavesDone()*100+(won?800+Math.max(0,400-S.turn*4):0)+(S.block?BLOCK_BONUS:0))*(MULT[CUR]||1))-(S.penalty||0)}
 function finalScore(){return Math.max(0,liveScore())}
 function loadBest(){try{return JSON.parse(localStorage.getItem('xne-best')||'{}')||{}}catch(e){return{}}}
 function saveLocal(e){const all=loadBest(),l=all[CUR]||[],prev=l[0]?l[0].score:-1;l.push(e);l.sort((a,b)=>b.score-a.score);all[CUR]=l.slice(0,5);try{localStorage.setItem('xne-best',JSON.stringify(all))}catch(x){}return e.score>prev&&e.score>0}
@@ -417,6 +425,9 @@ const SFX={
 SFX.taunt=()=>[[784,.12],[659,.12],[880,.16],[784,.12],[659,.2]].forEach(([f,d],i)=>tone(f,d,'square',.07,null,.35+i*.15));
 SFX.error=()=>{tone(150,.16,'square',.1);tone(110,.24,'square',.1,null,.1);noise(.12,.15,400)};
 SFX.land=()=>{tone(150,.07,'triangle',.12,90);noise(.04,.1,900)};
+SFX.appear=()=>[1568,2093,2637].forEach((f,i)=>tone(f,.14,'sine',.05,null,i*.07));
+SFX.coin=()=>{tone(988,.08,'square',.06);tone(1319,.32,'square',.06,null,.08)};
+SFX.steal=()=>{tone(700,.3,'sawtooth',.08,180);noise(.15,.15,1200,.05)};
 SFX.undo=()=>{tone(520,.35,'sawtooth',.07,130);[0,.1,.2].forEach(d=>noise(.06,.12,1800,d))};
 const sfx=k=>{if(muted)return;try{SFX[k]()}catch(e){}};
 const ART={p:'O peão',n:'O cavalo',b:'O bispo',r:'A torre',q:'A rainha',k:'O rei'};
@@ -660,7 +671,7 @@ function randPiece(){const W=D().weights,tot=W.reduce((a,[,w])=>a+w,0);let x=Mat
 function spawn(){
   if(!S.queue.length)return;
   for(const row of [0,1,2]){
-    const cols=[];for(let c=0;c<8;c++)if(!S.board[row][c])cols.push(c);
+    const cols=[];for(let c=0;c<8;c++)if(!S.board[row][c]&&!(S.item&&S.item.r===row&&S.item.c===c))cols.push(c);
     if(!cols.length)continue;
     const c=cols[Math.floor(Math.random()*cols.length)];
     S.board[row][c]={t:S.queue.shift(),side:'b',id:S.nid++,fresh:true};
@@ -684,7 +695,7 @@ function checkBlock(){
   return true;
 }
 /* Desfazer: volta ao início do turno anterior (sua jogada + resposta dos inimigos), custando pontos. */
-const snap=()=>JSON.parse(JSON.stringify({board:S.board,belt:S.belt,wave:S.wave,queue:S.queue,waveLen:S.waveLen,turn:S.turn,caps:S.caps,pts:S.pts,nid:S.nid,plan:S.plan,msg:S.msg,taunter:S.taunter||null}));
+const snap=()=>JSON.parse(JSON.stringify({board:S.board,belt:S.belt,wave:S.wave,queue:S.queue,waveLen:S.waveLen,turn:S.turn,caps:S.caps,pts:S.pts,nid:S.nid,plan:S.plan,msg:S.msg,taunter:S.taunter||null,item:S.item||null,coins:S.coins||0,got:S.got||0}));
 function undo(){
   if(S.phase!=='player'||busy||!S.undo)return;
   const cost=undoCost(),wave=S.wave;
@@ -712,8 +723,48 @@ function newGame(){
   spawn();
   startTurn(false);
 }
+/* ---------- moedas e diamantes ----------
+   Aparecem ao acaso em casas vazias do meio do tabuleiro. O jogador pega movendo uma peça até lá;
+   se um inimigo chegar antes, rouba. O diamante vale mais, mas fica perto da entrada dos inimigos. */
+const ITEMS={
+  coin:{art:'Uma moeda',name:'moeda',val:40,ttl:4,rows:[3,4]},
+  gem:{art:'Um diamante',name:'diamante',val:120,ttl:3,rows:[1,2]}
+};
+const ITEM_CHANCE={facil:.25,normal:.2,dificil:.18,mestre:.15},GEM_SHARE=.25;
+const sqName=(r,c)=>'abcdefgh'[c]+(8-r);
+const itemVal=k=>Math.round(ITEMS[k].val*(MULT[CUR]||1));
+function itemSVG(k){
+  if(k==='gem')return`<svg viewBox="0 0 100 100" aria-hidden="true"><g stroke="#1b2a4a" stroke-width="3" stroke-linejoin="round"><path d="M30 28H70L85 45L50 85L15 45Z" fill="#8fd3ff"/><path d="M15 45H85M30 28L40 45L50 85L60 45L70 28M40 45L50 28L60 45" fill="none"/><path d="M33 33L38 41" stroke="#fff" stroke-width="4" stroke-linecap="round"/></g></svg>`;
+  return`<svg viewBox="0 0 100 100" aria-hidden="true"><g stroke="#7a5310" stroke-width="3"><circle cx="50" cy="50" r="31" fill="#f2c14e"/><circle cx="50" cy="50" r="22" fill="#f7d77a"/><path d="M50 34L54.5 45H66L56.8 51.8L60.3 63L50 56L39.7 63L43.2 51.8L34 45H45.5Z" fill="#e0a92e" stroke-width="2.5" stroke-linejoin="round"/></g></svg>`;
+}
+/* Chamado no começo de cada turno do jogador: envelhece o item ou sorteia um novo. Devolve a mensagem. */
+function tickItem(){
+  if(S.item){
+    if(--S.item.ttl>0)return S.item.ttl===1?`Último turno para pegar ${ITEMS[S.item.k].art.toLowerCase()} em ${sqName(S.item.r,S.item.c)}!`:'';
+    const it=S.item;S.item=null;popText(it.r,it.c,'sumiu!','#9aa3b8');return `${ITEMS[it.k].art} sumiu.`;
+  }
+  if(Math.random()>=(ITEM_CHANCE[CUR]??.2))return '';
+  const k=Math.random()<GEM_SHARE?'gem':'coin',I=ITEMS[k],free=[];
+  I.rows.forEach(r=>{for(let c=0;c<8;c++)if(!S.board[r][c])free.push([r,c])});
+  if(!free.length)return '';
+  const[r,c]=pick(free);S.item={k,r,c,ttl:I.ttl};sfx('appear');
+  return `${I.art} apareceu em ${sqName(r,c)}! Vale ${itemVal(k)} pontos e some em ${I.ttl} turnos. Leve uma peça até lá, mas cuidado com os inimigos.`;
+}
+/* Uma peça chegou na casa (r,c): pega o item se for sua, rouba se for inimiga. */
+function takeItem(r,c,side){
+  const it=S.item;if(!it||it.r!==r||it.c!==c)return '';
+  S.item=null;const I=ITEMS[it.k];
+  if(side==='w'){
+    S.coins=(S.coins||0)+I.val;S.got=(S.got||0)+1;S.lossAnim=false;
+    setTimeout(()=>{sfx('coin');burst(r,c,it.k==='gem'?['#8fd3ff','#fff','#f2c14e']:['#f2c14e','#fff3c4','#e0a92e'],22,80);popText(r,c,'+'+itemVal(it.k),'#f2c14e')},200);
+    return `Você pegou ${I.art.toLowerCase()}: +${itemVal(it.k)} pontos!`;
+  }
+  setTimeout(()=>{sfx('steal');popText(r,c,'roubou!','#ef5b4f')},200);
+  return `O inimigo roubou ${I.art.toLowerCase()}!`;
+}
+
 function startTurn(addBelt){
-  let fell='';
+  let fell='';const itemMsg=addBelt?tickItem():'';
   if(addBelt){const t=randPiece();if(S.belt.length>=BELT_MAX){fell=S.belt.shift();S.fell=fell;sfx('drop')}S.belt.push(t);S.arrive=true;setTimeout(()=>sfx('arrive'),120)}
   makePlan();M.danger=inCheck(S.board);
   S.phase='player';S.sel=null;S.targets=[];
@@ -722,7 +773,7 @@ function startTurn(addBelt){
     else{S.msg='Xeque! Tire o rei da linha de ataque, bloqueie ou capture o atacante.';sfx('check');flash('#ef5b4f')}
   }else{
     const bc=blockCount();
-    S.msg=S.note?S.note:fell?`O ${NAME[fell]} caiu da esteira. Coloque uma peça ou mova uma das suas.`:bc>=4?`Linha vermelha: ${bc} de 8 casas são suas. Feche a entrada para vencer com bônus!`:'Seu turno: coloque uma peça da esteira ou mova uma das suas.';
+    S.msg=S.note?S.note:itemMsg?itemMsg:fell?`O ${NAME[fell]} caiu da esteira. Coloque uma peça ou mova uma das suas.`:bc>=4?`Linha vermelha: ${bc} de 8 casas são suas. Feche a entrada para vencer com bônus!`:'Seu turno: coloque uma peça da esteira ou mova uma das suas.';
   }
   if(S.phase==='player')S.turnStart=snap();
   render();
@@ -744,7 +795,7 @@ async function enemyTurn(){
     const ok=moves(S.board,r,c,false).some(([a,d])=>a===to[0]&&d===to[1])&&!(S.board[to[0]][to[1]]?.t==='k');
     if(!ok){const m=bestMove(S.board,r,c);if(!m)continue;to=m.to}
     const wasP=S.board[r][c].t==='p',atkT=S.board[r][c].t,atkId=S.board[r][c].id;
-    const cap=apply(S.board,r,c,to[0],to[1]);
+    const cap=apply(S.board,r,c,to[0],to[1]),stole=takeItem(to[0],to[1],'b');
     if(cap&&optZ.checked){
       const canBack=attacked(S.board,'w',to[0],to[1]);
       const line=Math.random()<.35&&BY[atkT]?BY[atkT]:pick(Math.random()<.5?TAUNT[cap.t]:TAUNT.any);
@@ -755,6 +806,7 @@ async function enemyTurn(){
     animMove(r,c,to[0],to[1],atkT,'b');
     if(cap){S.msg=S.tmsg||`O inimigo capturou seu ${NAME[cap.t]}.`;S.tmsg=null;sfx('hurt');shake();setTimeout(()=>{burst(to[0],to[1],['#f8f3e7','#ef5b4f','#c9b48e']);popText(to[0],to[1],'−'+NAME[cap.t],'#ef5b4f')},200)}
     else sfx('enemy');
+    if(stole){S.msg=stole;S.note=S.note||stole}
     if(wasP&&S.board[to[0]][to[1]].t==='q'){S.msg='Um peão inimigo virou rainha!';setTimeout(()=>{burst(to[0],to[1],['#7a1626','#ef5b4f']);sfx('promo')},250)}
     S.plan=S.plan.filter(x=>x!==step);
     render();await wait(Math.max(380,S.lastDur*1000+160));
@@ -778,7 +830,8 @@ function clickCell(r,c){
       S.anim={to:[r,c],kind:'place'};sfx('place');setTimeout(()=>spawnFx('ring',`left:${c*12.5}%;top:${r*12.5}%;--c:#4fb36a`,'',600),180);
     }else{
       const fr=S.sel.r,fc=S.sel.c,mt=S.board[fr][fc].t,wasP=mt==='p';
-      const cap=apply(S.board,fr,fc,r,c);
+      const cap=apply(S.board,fr,fc,r,c),got=takeItem(r,c,'w');
+      if(got)S.cheerMsg=S.cheerMsg||got;
       animMove(fr,fc,r,c,mt,'w');
       const rev=cap&&S.taunter&&cap.id===S.taunter;
       if(cap&&!rev&&optZ.checked)cheer(mt,cap.t,r,c);
@@ -841,8 +894,9 @@ function render(){
     if(A)cls.push('mv');
     const ac2=A?' '+A.kind:'',st=A&&A.kind!=='place'?` style="--dx:${A.dx};--dy:${A.dy};--dur:${A.dur}s"`:'';
     const now=Date.now(),dn=p&&S.dance&&S.dance.id===p.id&&now<S.dance.until&&!A?' dance':'',ch=p&&!dn&&!A&&((p.side==='b'&&S.cheer&&now<S.cheer)||(p.side==='w'&&S.cheerW&&now<S.cheerW))?' cheer':'';
-    const pc=p?`<span class="pc ${p.side==='w'?(p.t==='k'?'k':'w'):'b'}${p.fresh?' fresh':''}${ac2}${dn}${ch}"${st}>${glyph(p.t,p.side)}</span>`:'';
-    const lab=p?`${p.side==='w'?'sua':'inimiga'} ${NAME[p.t]}`:'vazia';
+    const it=!p&&S.item&&S.item.r===r&&S.item.c===c?S.item:null;
+    const pc=p?`<span class="pc ${p.side==='w'?(p.t==='k'?'k':'w'):'b'}${p.fresh?' fresh':''}${ac2}${dn}${ch}"${st}>${glyph(p.t,p.side)}</span>`:it?`<span class="item ${it.k}${it.ttl===1?' last':''}">${itemSVG(it.k)}<i>${it.ttl}</i></span>`:'';
+    const lab=p?`${p.side==='w'?'sua':'inimiga'} ${NAME[p.t]}`:it?`${ITEMS[it.k].name}, vale ${itemVal(it.k)} pontos, some em ${it.ttl} turnos`:'vazia';
     h+=`<button class="${cls.join(' ')}" data-r="${r}" data-c="${c}" aria-label="${'abcdefgh'[c]}${8-r}, ${lab}">${pc}</button>`;
   }
   optA.disabled=!D().arrows;
@@ -878,7 +932,7 @@ function render(){
   document.getElementById('waveTitle').textContent=S.phase==='won'?(S.block?'Entrada bloqueada':'Ondas concluídas'):`Onda ${S.wave+1} de ${WAVES.length}`;
   const total=WAVES.length;document.getElementById('waveBar').style.width=Math.min(100,(S.wave/total)*100+(S.phase==='won'?0:Math.max(0,1-(S.queue.length+countBlack())/(S.waveLen||1))*100/total))+'%';
   document.getElementById('turn').textContent='Turno '+S.turn;
-  document.getElementById('caps').textContent=S.caps;
+  document.getElementById('caps').textContent=S.caps;document.getElementById('got').textContent=S.got||0;
   const nb=countBlack();document.getElementById('onBoard').textContent=nb+(nb===1?' no tabuleiro':' no tabuleiro');
   const q=S.queue.length?S.queue:(WAVES[S.wave+1]?waveQueue(S.wave+1):[]);
   document.getElementById('queueLabel').textContent=S.queue.length?'Ainda vão entrar':(WAVES[S.wave+1]?'Próxima onda':'Última onda em campo');

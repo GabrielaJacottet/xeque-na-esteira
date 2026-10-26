@@ -25,6 +25,7 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 | Desenho das peças (SVG) | `js/pecas.js` (`const PAL=`, `function pieceSVG`) |
 | Ondas inimigas | `const WAVES=` |
 | Níveis de dificuldade | `const DIFF=` (fácil, normal, difícil, mestre) |
+| Moedas e diamantes | `const ITEMS=`, `ITEM_CHANCE`, `function tickItem`, `function takeItem`, `function itemSVG` |
 | Pontuação ao vivo e desfazer | `function liveScore`, `function undo`, `const snap=`, `UNDO_COST` |
 | Ranking, login e pontuação | `const RK=`, `function syncAcct`, `function scoreBlock`, `function wireScore`, `function finalScore`, `function nickError`; `<script type="module">` no fim |
 | Sons (Web Audio) | `const SFX=`, `function tone`, `function noise` |
@@ -46,7 +47,8 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 - Derrota só por xeque-mate. Inimigos nunca capturam o rei.
 - Bloqueio total (`function checkBlock`): as 8 casas da linha 0 ocupadas por peças do jogador = vitória imediata, +1000 de bônus (`BLOCK_BONUS`), campo `block` no ranking.
 - Próxima onda começa quando sobram ≤2 inimigos; a última precisa ser zerada.
-- Pontuação: capturas×10 + 100/onda + 800 vitória + 1000 bloqueio total + bônus de rapidez, × multiplicador do nível, − penalidades de desfazer.
+- Moedas (40, linhas 3–4, 4 turnos) e diamantes (120, linhas 1–2, 3 turnos, 25% dos sorteios): no máximo um item por vez; chance por turno 25/20/18/15% (fácil→mestre). Jogador pega movendo uma peça até a casa; inimigo que pisa rouba; inimigos não nascem em cima. Valor entra em `S.coins` (× multiplicador).
+- Pontuação: capturas×10 + moedas + 100/onda + 800 vitória + 1000 bloqueio total + bônus de rapidez, × multiplicador do nível, − penalidades de desfazer.
 - Desfazer: volta ao início do turno anterior (jogada + resposta inimiga), um nível só; custa 50 × multiplicador (`S.penalty`). Indisponível após o fim da partida. Placar ao vivo pode ficar negativo; a final tem mínimo 0.
 
 ## Estado e decisões
