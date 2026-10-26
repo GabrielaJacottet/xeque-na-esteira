@@ -2,7 +2,7 @@
    O e-mail de destino fica guardado na conta do Web3Forms, nunca no código do site.
    Para gerar a chave: abra web3forms.com, digite seu e-mail e a chave chega por e-mail.
    Com a chave vazia, o formulário aparece desativado. */
-export const FEEDBACK_KEY='';
+export const FEEDBACK_KEY='6ef360c4-5b73-44ed-b23c-6f6007625fd0';
 
 export const feedbackOn=()=>!!FEEDBACK_KEY;
 
