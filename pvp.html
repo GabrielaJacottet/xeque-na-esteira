@@ -3,9 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="robots" content="noindex">
-<meta name="description" content="Xeque na Esteira PvP: teste local das regras com esteira compartilhada.">
-<title>PvP (teste) · Xeque na Esteira</title>
+<meta name="description" content="Xeque na Esteira PvP: jogue online com um amigo ou no mesmo aparelho, com uma esteira compartilhada.">
+<title>Contra um amigo · Xeque na Esteira</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
@@ -113,6 +112,9 @@ ol.log{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:colum
 ol.log b{font-weight:600}
 ol.how{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.86rem}
 ol.how b{color:var(--fg);font-weight:500}
+[hidden]{display:none!important}
+.code{font-family:var(--display);font-weight:800;font-size:2rem;line-height:1;letter-spacing:.14em;color:var(--gold)}
+#oNote.err{color:var(--danger)}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -120,8 +122,8 @@ ol.how b{color:var(--fg);font-weight:500}
 <div class="app">
   <header>
     <div>
-      <h1>Xeque na <span>Esteira</span> <span class="tag">PvP · teste local</span></h1>
-      <p class="sub">Dois jogadores no mesmo aparelho, um tabuleiro e uma esteira compartilhada. Serve para testar as regras antes do modo online.</p>
+      <h1>Xeque na <span>Esteira</span> <span class="tag">Contra um amigo</span></h1>
+      <p class="sub">Um tabuleiro e uma esteira só para os dois. Jogue online com uma sala e um código, ou no mesmo aparelho.</p>
     </div>
     <nav class="top"><a class="b" href="./">← Início</a><a class="b" href="jogo.html">Jogo solo</a></nav>
   </header>
@@ -137,20 +139,40 @@ ol.how b{color:var(--fg);font-weight:500}
     <aside>
       <div class="status" id="status" aria-live="polite"><p id="msg"></p></div>
 
+      <div class="card" id="online">
+        <h2>Jogar online</h2>
+        <p class="muted" style="margin:0">Crie uma sala e mande o código para o seu amigo, ou entre com o código que ele mandou. Não precisa de conta.</p>
+        <label class="fld">Seu apelido <input id="oNick" maxlength="16" autocomplete="off" spellcheck="false" style="width:16ch"></label>
+        <label class="fld">Relógio de cada um <select id="oClock"><option value="60">1 minuto</option><option value="180" selected>3 minutos</option><option value="300">5 minutos</option></select></label>
+        <button class="b pri" id="oCreate" type="button">Criar sala</button>
+        <div class="fld"><label for="oCode">Tem um código?</label><span><input id="oCode" maxlength="5" autocomplete="off" spellcheck="false" style="width:8ch;text-transform:uppercase"> <button class="b" id="oJoin" type="button">Entrar</button></span></div>
+        <p class="muted" id="oNote" role="status" style="margin:0;min-height:1.4em"></p>
+      </div>
+
+      <div class="card" id="room" hidden>
+        <div class="row"><h2>Sala</h2><span class="code" id="rcode"></span></div>
+        <p class="muted" style="margin:0" id="rinfo"></p>
+        <div class="btns"><button class="b" id="copy" type="button">Copiar link da sala</button></div>
+      </div>
+
       <div class="card">
         <div class="row"><h2>Partida</h2><span class="muted" id="turn"></span></div>
-        <div class="player" id="pw"><span class="dot w"></span><span class="who"><b>Brancas</b><span class="muted" id="mw"></span></span><span class="clock" id="cw"></span></div>
-        <div class="player" id="pb"><span class="dot b"></span><span class="who"><b>Pretas</b><span class="muted" id="mb"></span></span><span class="clock" id="cb"></span></div>
+        <div class="player" id="pw"><span class="dot w"></span><span class="who"><b id="nw">Brancas</b><span class="muted" id="mw"></span></span><span class="clock" id="cw"></span></div>
+        <div class="player" id="pb"><span class="dot b"></span><span class="who"><b id="nb">Pretas</b><span class="muted" id="mb"></span></span><span class="clock" id="cb"></span></div>
         <div class="btns">
           <button class="b" id="pass" type="button">Passar a vez</button>
           <button class="b" id="undo" type="button">Desfazer</button>
           <button class="b" id="restart" type="button">Nova partida</button>
+          <button class="b" id="resign" type="button" hidden>Desistir</button>
+          <button class="b pri" id="rematch" type="button" hidden>Revanche (cores trocadas)</button>
+          <button class="b" id="leave" type="button" hidden>Sair da sala</button>
         </div>
+        <label class="tg"><input type="checkbox" id="optHints" checked> Mostrar lances possíveis (as casas proibidas continuam com X)</label>
       </div>
 
-      <div class="card">
-        <h2>Ajustes do teste</h2>
-        <p class="muted" style="margin:0">Valem a partir da próxima partida. Mesma semente, mesma sequência de peças na esteira.</p>
+      <div class="card" id="cfg">
+        <h2>No mesmo aparelho</h2>
+        <p class="muted" style="margin:0">Os dois jogam neste aparelho, revezando. Os ajustes valem a partir da próxima partida; mesma semente, mesma sequência de peças na esteira.</p>
         <label class="fld">Início <select id="sStart"><option value="k">Só o rei</option><option value="kp">Rei + 2 peões</option></select></label>
         <label class="fld">Peças na esteira no início <select id="sBelt"><option value="3">3</option><option value="5" selected>5</option></select></label>
         <label class="fld">Relógio de cada jogador <select id="sClock"><option value="0">Sem relógio</option><option value="60">1 minuto</option><option value="180">3 minutos</option><option value="300">5 minutos</option></select></label>
@@ -158,7 +180,6 @@ ol.how b{color:var(--fg);font-weight:500}
         <div class="fld"><label for="sSeed">Semente da esteira</label><span><input id="sSeed" inputmode="numeric" autocomplete="off"> <button class="b" id="reseed" type="button" style="padding:6px 10px">Sortear</button></span></div>
         <label class="tg"><input type="checkbox" id="sPass"> Permitir passar a vez</label>
         <label class="tg"><input type="checkbox" id="optFlip"> Virar o tabuleiro na vez das pretas</label>
-        <label class="tg"><input type="checkbox" id="optHints" checked> Mostrar lances possíveis (as casas proibidas continuam com X)</label>
         <button class="b pri" id="newGame" type="button">Nova partida com estes ajustes</button>
       </div>
 
@@ -175,6 +196,7 @@ ol.how b{color:var(--fg);font-weight:500}
           <li>Vence quem der <b>xeque-mate</b>. Colocar uma peça na frente do rei também tira do xeque.</li>
           <li>No fim do limite de turnos, vence quem tiver <b>mais material</b> no tabuleiro: peão 1, cavalo e bispo 3, torre 5, rainha 9.</li>
           <li>Sem lance e sem xeque é <b>afogamento</b>: empate. Com relógio, quem zerar o tempo perde.</li>
+          <li><b>Online:</b> as cores são sorteadas quando o amigo entra, e a revanche troca as cores.</li>
         </ol>
       </div>
     </aside>
@@ -225,6 +247,104 @@ function invalidMsg(r,c){
   return w?`Aí não: ${RG.forbid(S.board,w,p.t==='k')}.`:`${up(ART[p.t])} ${NAME[p.t]} não se move assim.`;
 }
 
+/* ---------- online ----------
+   A sala fica em js/sala.js (Firestore). Cada aparelho monta S a partir do documento da sala;
+   quem joga calcula o lance aqui (act) e grava o estado novo (sendMove). */
+let ON=null;  // {code, me, doc, recv, base, claimed, unsub}
+const BAD=['porra','caralho','merd','putaria','putinha','putona','filhodaputa','filhadaputa','buceta','fdp','viado','bosta','cacete','foda','arrombad','otario','vagabund','piroca','xoxota','corno','retardad','nazi','hitler','fuck','shit','bitch','dick','cunt','nigg','fag'];
+function nickError(n){
+  if(n.length<3)return'O apelido precisa ter pelo menos 3 caracteres.';
+  if(!/^[A-Za-zÀ-ÿ0-9_ ]{3,16}$/.test(n))return'Use só letras, números, espaço ou _ (até 16).';
+  const s=n.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z]/g,'');
+  if(BAD.some(w=>s.includes(w)))return'Escolha outro apelido, por favor.';
+  return'';
+}
+/* Tabuleiro como texto de 64 letras (o Firestore não guarda lista dentro de lista): maiúscula = brancas, ponto = vazia. */
+const enc=b=>b.flat().map(p=>p?(p.side==='w'?p.t.toUpperCase():p.t):'.').join('');
+const dec=s=>{const b=RG.empty();[...s].forEach((ch,i)=>{if(ch!=='.')b[i>>3][i&7]={t:ch.toLowerCase(),side:ch===ch.toUpperCase()?'w':'b'}});return b};
+function initState(seed,clock){
+  const b=RG.empty();b[7][4]={t:'k',side:'w'};b[0][4]={t:'k',side:'b'};
+  let belt='';for(let i=0;i<BELT_MAX;i++)belt+=RG.pieceAt(seed,i,WEIGHTS);
+  return{seed,board:enc(b),belt,drawn:BELT_MAX,toMove:'w',ply:0,left:{w:clock*1000,b:clock*1000},last:[],log:[]};
+}
+const nickOf=side=>{const d=ON?.doc,u=d?.[side];return!u?'?':u===d.host?d.hostNick:d.guestNick};
+const note=(t,err)=>{$('oNote').textContent=t;$('oNote').classList.toggle('err',!!err)};
+/* window.NET e window.SALA chegam pelo <script type="module"> do fim da página. */
+const netReady=()=>new Promise((res,rej)=>{let n=0;const go=()=>{
+  if(window.NET&&NET.ready&&window.SALA)return NET.enabled?res():rej(new Error('O online está desativado nesta cópia do jogo.'));
+  if(++n>80)return rej(new Error('O online não carregou. Abra o jogo pelo site (não pelo arquivo) e confira a internet.'));
+  setTimeout(go,100)};go()});
+
+async function enter(kind){
+  const nick=$('oNick').value.trim(),e=nickError(nick);if(e)return note(e,true);
+  try{localStorage.setItem('xne-nick',nick)}catch(x){}
+  $('oCreate').disabled=$('oJoin').disabled=true;note(kind==='create'?'Criando a sala…':'Entrando na sala…');
+  try{
+    await netReady();await SALA.ensureLogin();
+    let code;
+    if(kind==='create'){const clock=+$('oClock').value;code=await SALA.create(nick,clock,initState(randSeed(),clock))}
+    else{code=$('oCode').value.trim().toUpperCase();if(!/^[A-HJ-NP-Z]{5}$/.test(code))throw new Error('O código tem 5 letras.');await SALA.join(code,nick)}
+    note('');openRoom(code);
+  }catch(x){note(x.message,true)}
+  finally{$('oCreate').disabled=$('oJoin').disabled=false}
+}
+function openRoom(code){
+  if(ON?.unsub)ON.unsub();
+  ON={code,me:'w',doc:null,recv:Date.now(),base:{w:0,b:0},claimed:0};
+  history.replaceState(null,'',`?sala=${code}`);
+  ON.unsub=SALA.watch(code,(d,err)=>{
+    if(err){S.msg=err.message;S.bad=true;render();return}
+    if(!d){leaveRoom();note('Essa sala não existe mais.',true);return}
+    onRoom(d);
+  });
+  layout();
+}
+function leaveRoom(){
+  if(ON?.unsub)ON.unsub();ON=null;history.replaceState(null,'',location.pathname);layout();newGame();
+}
+function layout(){$('online').hidden=!!ON;$('room').hidden=!ON;$('cfg').hidden=!!ON}
+/* Monta S a partir do documento da sala. */
+function onRoom(d){
+  const prev=ON.doc;ON.doc=d;ON.me=d.b===SALA.uid?'b':'w';
+  if(!prev||prev.ply!==d.ply||prev.status!==d.status){ON.recv=Date.now();ON.base={...d.left};ON.claimed=0}
+  S={board:dec(d.board),belt:[...d.belt],seed:d.seed,drawn:d.drawn,toMove:d.toMove,ply:d.ply,limit:d.limit,clock:d.clock*1000,left:{...d.left},pass:false,
+     sel:null,targets:[],last:(d.last||[]).map(i=>[i>>3,i&7]),log:d.log||[],hist:[],over:null,fell:null,arrive:!!prev&&prev.ply<d.ply,msg:''};
+  if(S.arrive&&S.last.length===1){const[r,c]=S.last[0];if(S.board[r][c])S.board[r][c].fresh=true}
+  const link=location.origin+location.pathname+'?sala='+d.code;
+  $('rcode').textContent=d.code;
+  $('rinfo').textContent=d.status==='waiting'
+    ?`Mande o código ou o link para o seu amigo. A partida começa quando ele entrar, e as cores são sorteadas. Relógio: ${d.clock/60} min para cada um.`
+    :`Você joga de ${SIDE[ON.me]} contra ${nickOf(RG.opp(ON.me))}. Relógio: ${d.clock/60} min para cada um.`;
+  $('copy').onclick=()=>{navigator.clipboard?.writeText(link).then(()=>{$('copy').textContent='Link copiado!'},()=>{prompt('Copie o link:',link)})};
+  if(d.status==='over'&&d.over){tickOnline();finish(d.over.winner,d.over.why);render()}
+  else if(d.status==='waiting'){S.msg=S.turnMsg=`Sala ${d.code} criada. Mande o código ou o link para o seu amigo e espere ele entrar.`;render()}
+  else{tickOnline();startTurn()}
+}
+/* Grava o estado depois do lance. As regras do Firestore conferem a vez e o número do lance. */
+function sendMove(){
+  const left={w:Math.round(Math.max(0,S.left.w)),b:Math.round(Math.max(0,S.left.b))};
+  SALA.move(ON.code,{board:enc(S.board),belt:S.belt.join(''),drawn:S.drawn,toMove:S.toMove,ply:S.ply,left,
+    last:(S.last||[]).map(([r,c])=>r*8+c),log:S.log,status:S.over?'over':'playing',over:S.over||null})
+    .catch(e=>{S.msg='Não consegui enviar o lance: '+e.message;S.bad=true;render()});
+}
+/* Relógio online: conta a partir do último lance recebido. Se o do adversário zerar, reivindica a vitória. */
+function tickOnline(){
+  if(!ON?.doc||ON.doc.status!=='playing'||!S)return;
+  const t=S.toMove,left=ON.base[t]-(Date.now()-ON.recv);S.left[t]=left;renderClocks();
+  if(t!==ON.me&&left<-1500&&Date.now()-ON.claimed>4000){ON.claimed=Date.now();SALA.claimTime(ON.code,ON.me).catch(()=>{})}
+}
+/* No online, cada um só joga na sua vez. */
+function blocked(){
+  if(!ON)return false;
+  if(S.over)return true;
+  const st=ON.doc?.status;
+  if(st!=='playing'||S.toMove!==ON.me||S.left[ON.me]<=0){
+    S.msg=st==='waiting'?'Espere o seu amigo entrar na sala.':S.toMove!==ON.me?`Espere a sua vez: ${nickOf(S.toMove)} está jogando.`:'Seu tempo acabou.';
+    render();return true;
+  }
+  return false;
+}
+
 function startTurn(){
   const side=S.toMove,chk=RG.inCheck(S.board,side),any=RG.hasAnyLegal(S.board,S.belt,side);
   S.over=null;S.sel=null;S.targets=[];S.bad=false;
@@ -238,6 +358,7 @@ function startTurn(){
       :!any?`As ${SIDE[side]} não têm lance. Passem a vez.`
       :stuck?`Vez das ${SIDE[side]}. O rei está preso, mas não está em xeque: ${stillCanPlay(side)}. No xadrez comum, sem nenhum outro lance, isso seria afogamento (empate).`
       :`Vez das ${SIDE[side]}: coloque uma peça da esteira na sua área ou mova uma peça sua.`);
+    if(ON)S.msg=S.turnMsg=side===ON.me?S.msg.replace(/Vez das (brancas|pretas)/,'Sua vez'):`Vez de ${nickOf(side)} (${SIDE[side]}). Aguarde o lance.`;
   }
   render();
 }
@@ -247,8 +368,10 @@ function finish(winner,why){
   const W=winner?up(SIDE[winner]):'',mw=RG.material(S.board,'w'),mb=RG.material(S.board,'b');
   if(why==='mate')S.msg=`Xeque-mate! ${W} vencem.`;
   else if(why==='tempo')S.msg=`O tempo das ${SIDE[RG.opp(winner)]} acabou. ${W} vencem.`;
+  else if(why==='desistencia')S.msg=`As ${SIDE[RG.opp(winner)]} desistiram. ${W} vencem.`;
   else if(why==='afogamento')S.msg=`Afogamento: as ${SIDE[S.toMove]} não têm lance e não estão em xeque. Empate.`;
   else S.msg=winner?`Fim dos ${S.limit} turnos. ${W} vencem por material (${mw} × ${mb}).`:`Fim dos ${S.limit} turnos. Empate em material (${mw} × ${mb}).`;
+  if(ON)S.msg+=winner?(winner===ON.me?' Você venceu!':' Você perdeu.'):'';
 }
 
 /* Uma ação do jogador da vez: colocar, mover ou passar. Depois dela a esteira anda uma casa. */
@@ -269,10 +392,11 @@ function act(kind,d){
   S.log.push({n:Math.floor(S.ply/2)+1,side,txt:txt+(S.fell?` (${ART[S.fell]} ${NAME[S.fell]} caiu)`:'')});
   S.ply++;S.toMove=RG.opp(side);
   startTurn();
+  if(ON)sendMove();
 }
 
 function clickCell(r,c){
-  if(S.over)return;
+  if(S.over||blocked())return;
   const p=S.board[r][c],side=S.toMove;
   if(S.sel&&S.targets.some(([a,d])=>a===r&&d===c)){
     if(S.sel.kind==='belt')act('place',{i:S.sel.i,r,c});else act('move',{fr:S.sel.r,fc:S.sel.c,r,c});
@@ -287,7 +411,7 @@ function clickCell(r,c){
   render();
 }
 function clickSlot(i){
-  if(S.over||i>=S.belt.length)return;
+  if(S.over||blocked()||i>=S.belt.length)return;
   S.msg=S.turnMsg;S.bad=false;
   if(S.sel?.kind==='belt'&&S.sel.i===i){S.sel=null;S.targets=[]}
   else{S.sel={kind:'belt',i};S.targets=RG.legalPlacements(S.board,S.belt[i],S.toMove);if(!S.targets.length)S.msg='Não há onde colocar essa peça sem deixar o rei em xeque.'}
@@ -295,7 +419,7 @@ function clickSlot(i){
 }
 
 function render(){
-  const side=S.toMove,flip=$('optFlip').checked&&side==='b';
+  const side=S.toMove,flip=ON?ON.me==='b':$('optFlip').checked&&side==='b';
   /* Com "Mostrar lances possíveis" desligado somem as bolinhas verdes; o X das casas proibidas continua. */
   const tg=new Set($('optHints').checked?S.targets.map(([a,d])=>a*8+d):[]),zr=S.sel?.kind==='belt'?RG.zone(side):[];
   const selP=S.sel?.kind==='piece'?S.board[S.sel.r][S.sel.c]:null;
@@ -331,10 +455,15 @@ function render(){
   $('status').className='status'+(S.over?(S.over.winner?' good':''):chk||S.bad?' warn':'');
   $('msg').textContent=S.msg;
   $('turn').textContent=`Turno ${Math.min(S.limit,Math.floor(S.ply/2)+1)} de ${S.limit}`;
-  for(const s of['w','b']){$('p'+s).classList.toggle('on',!S.over&&side===s);$('m'+s).textContent=`material ${RG.material(S.board,s)}`}
+  const live=!S.over&&(!ON||ON.doc?.status==='playing');
+  for(const s of['w','b']){
+    $('p'+s).classList.toggle('on',live&&side===s);$('m'+s).textContent=`material ${RG.material(S.board,s)}`;
+    $('n'+s).textContent=up(SIDE[s])+(ON&&ON.doc?.status!=='waiting'?` · ${nickOf(s)}${ON.me===s?' (você)':''}`:'');
+  }
   renderClocks();
-  $('undo').disabled=!S.hist.length;
-  $('pass').hidden=!S.pass;$('pass').disabled=!!S.over||chk;
+  $('undo').disabled=!S.hist.length;$('undo').hidden=$('restart').hidden=!!ON;
+  $('pass').hidden=!S.pass||!!ON;$('pass').disabled=!!S.over||chk;
+  $('resign').hidden=!ON||ON.doc?.status!=='playing';$('rematch').hidden=!ON||ON.doc?.status!=='over';$('leave').hidden=!ON;
   $('log').innerHTML=S.log.map(e=>`<li><b>${e.n}. ${up(SIDE[e.side])}:</b> ${e.txt}</li>`).join('')||'<li class="muted">Nenhum lance ainda.</li>';
   $('log').scrollTop=$('log').scrollHeight;
 }
@@ -350,6 +479,7 @@ function renderClocks(){
 let lastTick=performance.now();
 setInterval(()=>{
   const now=performance.now(),dt=now-lastTick;lastTick=now;
+  if(ON){tickOnline();return}
   if(!S||S.over||!S.clock)return;
   S.left[S.toMove]-=dt;
   if(S.left[S.toMove]<=0){S.left[S.toMove]=0;finish(RG.opp(S.toMove),'tempo');render()}
@@ -366,8 +496,28 @@ $('optFlip').onchange=()=>render();
 /* Mesma preferência do jogo solo (xne-hints). */
 try{$('optHints').checked=localStorage.getItem('xne-hints')!=='0'}catch(e){}
 $('optHints').onchange=()=>{try{localStorage.setItem('xne-hints',$('optHints').checked?'1':'0')}catch(e){}render()};
+$('oCreate').onclick=()=>enter('create');
+$('oJoin').onclick=()=>enter('join');
+$('oCode').onkeydown=e=>{if(e.key==='Enter')enter('join')};
+$('resign').onclick=()=>{if(ON&&confirm('Desistir desta partida?'))SALA.resign(ON.code,RG.opp(ON.me)).catch(e=>{S.msg=e.message;render()})};
+$('rematch').onclick=()=>{if(ON?.doc)SALA.rematch(ON.code,ON.doc,initState(randSeed(),ON.doc.clock)).catch(e=>{S.msg=e.message;render()})};
+$('leave').onclick=leaveRoom;
+try{$('oNick').value=localStorage.getItem('xne-nick')||''}catch(e){}
 $('sSeed').value=randSeed();
 newGame();
+/* Link de convite (?sala=CÓDIGO): já preenche o código e entra sozinho se o apelido e o login já existirem. */
+{
+  const code=(new URLSearchParams(location.search).get('sala')||'').toUpperCase();
+  if(/^[A-HJ-NP-Z]{5}$/.test(code)){
+    $('oCode').value=code;note('Você recebeu um convite. Escreva seu apelido e toque em Entrar.');
+    netReady().then(()=>{if(NET.player&&!nickError($('oNick').value.trim()))enter('join')}).catch(e=>note(e.message,true));
+  }
+}
+</script>
+<script type="module">
+import {NET} from './js/rede.js';
+import {SALA} from './js/sala.js';
+window.NET=NET;window.SALA=SALA;
 </script>
 </body>
 </html>

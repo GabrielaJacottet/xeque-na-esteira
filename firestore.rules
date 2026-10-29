@@ -1,5 +1,5 @@
 rules_version = '2';
-// Ranking do Xeque na Esteira.
+// Ranking e salas do PvP online do Xeque na Esteira.
 // Publique em: Console do Firebase > Firestore Database > Regras (ou `firebase deploy --only firestore`).
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -10,7 +10,9 @@ service cloud.firestore {
       allow read: if true;
 
       // Só quem está logado grava, e só no próprio documento, e só para subir o recorde.
+      // Convidado (login anônimo) joga o PvP, mas não entra no ranking.
       allow create, update: if request.auth != null
+        && request.auth.token.firebase.sign_in_provider != 'anonymous'
         && id == request.auth.uid + '_' + request.resource.data.difficulty
         && validScore(request.resource.data)
         && (resource == null || request.resource.data.score > resource.data.score);
@@ -18,6 +20,102 @@ service cloud.firestore {
       // Ninguém apaga pelo site. Para moderar um apelido, apague pelo console.
       allow delete: if false;
     }
+
+    // salas/{CÓDIGO}: uma partida PvP online. Quem joga calcula o lance e grava o estado novo;
+    // estas regras garantem os jogadores, a vez, o lance de 1 em 1 e o relógio.
+    match /salas/{code} {
+      // Abre quem sabe o código; ninguém lista as salas.
+      allow get: if request.auth != null;
+      allow list, delete: if false;
+
+      allow create: if request.auth != null
+        && code.matches('^[A-HJ-NP-Z]{5}$')
+        && roomShape(request.resource.data)
+        && request.resource.data.code == code
+        && request.resource.data.host == request.auth.uid
+        && request.resource.data.status == 'waiting'
+        && request.resource.data.guest == null && request.resource.data.guestNick == null
+        && request.resource.data.w == null && request.resource.data.b == null
+        && request.resource.data.clock in [60, 180, 300]
+        && request.resource.data.limit == 40
+        && request.resource.data.ply == 0 && request.resource.data.over == null
+        && validNick(request.resource.data.hostNick)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.lastAt == request.time;
+
+      allow update: if request.auth != null
+        && roomShape(request.resource.data)
+        && fixed(request.resource.data, resource.data)
+        && (join(request.resource.data, resource.data)
+          || move(request.resource.data, resource.data)
+          || claimTime(request.resource.data, resource.data)
+          || resign(request.resource.data, resource.data)
+          || rematch(request.resource.data, resource.data));
+    }
+  }
+
+  function roomShape(d) {
+    return d.keys().hasOnly(['code', 'status', 'host', 'hostNick', 'guest', 'guestNick', 'w', 'b', 'clock', 'limit',
+        'seed', 'board', 'belt', 'drawn', 'toMove', 'ply', 'left', 'last', 'log', 'over', 'lastAt', 'createdAt'])
+      && d.status in ['waiting', 'playing', 'over']
+      && d.board is string && d.board.size() == 64
+      && d.belt is string && d.belt.size() <= 5
+      && d.seed is int && d.drawn is int && d.ply is int && d.ply >= 0 && d.ply <= 200
+      && d.toMove in ['w', 'b']
+      && d.left.keys().hasOnly(['w', 'b']) && d.left.w is int && d.left.b is int
+      && d.last is list && d.last.size() <= 2
+      && d.log is list && d.log.size() <= 200;
+  }
+  function validNick(n) {
+    return n is string && n.matches('^[A-Za-zÀ-ÿ0-9_ ]{3,16}$');
+  }
+  // O que nunca muda depois de criar a sala.
+  function fixed(d, r) {
+    return d.code == r.code && d.host == r.host && d.hostNick == r.hostNick
+      && d.clock == r.clock && d.limit == r.limit && d.createdAt == r.createdAt;
+  }
+  function samePlayers(d, r) {
+    return d.guest == r.guest && d.guestNick == r.guestNick && d.w == r.w && d.b == r.b;
+  }
+  function isPlayer(r) {
+    return request.auth.uid == r.w || request.auth.uid == r.b;
+  }
+  function turnUid(r) {
+    return r.toMove == 'w' ? r.w : r.b;
+  }
+  // O segundo jogador entra; as cores são sorteadas entre os dois.
+  function join(d, r) {
+    return r.status == 'waiting' && r.guest == null && request.auth.uid != r.host
+      && d.guest == request.auth.uid && validNick(d.guestNick) && d.status == 'playing'
+      && ((d.w == r.host && d.b == request.auth.uid) || (d.w == request.auth.uid && d.b == r.host))
+      && d.lastAt == request.time
+      && d.diff(r).affectedKeys().hasOnly(['guest', 'guestNick', 'status', 'w', 'b', 'lastAt']);
+  }
+  // Só quem está na vez joga, um lance por vez, e a vez passa para o outro.
+  function move(d, r) {
+    return r.status == 'playing' && samePlayers(d, r) && request.auth.uid == turnUid(r)
+      && d.ply == r.ply + 1 && d.seed == r.seed && d.toMove != r.toMove
+      && d.lastAt == request.time
+      && ((d.status == 'playing' && d.over == null) || (d.status == 'over' && d.over != null));
+  }
+  // O relógio de quem está na vez zerou (conferido pelo horário do servidor): o outro vence.
+  function claimTime(d, r) {
+    return r.status == 'playing' && isPlayer(r) && request.auth.uid != turnUid(r)
+      && request.time > r.lastAt + duration.value(r.left[r.toMove], 'ms')
+      && d.status == 'over' && d.over.why == 'tempo' && d.over.winner != r.toMove
+      && d.diff(r).affectedKeys().hasOnly(['status', 'over']);
+  }
+  function resign(d, r) {
+    return r.status == 'playing' && isPlayer(r)
+      && d.status == 'over' && d.over.why == 'desistencia'
+      && d.over.winner == (request.auth.uid == r.w ? 'b' : 'w')
+      && d.diff(r).affectedKeys().hasOnly(['status', 'over']);
+  }
+  // Partida nova na mesma sala, com as cores trocadas.
+  function rematch(d, r) {
+    return r.status == 'over' && isPlayer(r) && d.guest == r.guest && d.guestNick == r.guestNick
+      && d.w == r.b && d.b == r.w
+      && d.status == 'playing' && d.over == null && d.ply == 0 && d.lastAt == request.time;
   }
 
   function validScore(d) {

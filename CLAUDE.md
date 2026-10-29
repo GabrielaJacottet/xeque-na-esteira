@@ -6,9 +6,10 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 - `index.html` — página inicial (apresentação, escolha de modo: solo ou contra um amigo, login, níveis, ranking).
 - `jogo.html` — o jogo inteiro (HTML + CSS + JS, sem build).
 - `js/pecas.js` — desenho das peças (SVG), usado pelas duas páginas.
-- `pvp.html` — PvP em teste local (dois jogadores no mesmo aparelho, esteira compartilhada, ajustes de teste). Ligado pelo cartão "Contra um amigo" da página inicial; o modo online ainda não existe.
+- `pvp.html` — contra um amigo: online (sala com código; procure `/* ---------- online`, `function onRoom`, `function sendMove`, `function tickOnline`) ou no mesmo aparelho (ajustes de teste).
+- `js/sala.js` — salas `salas/{CÓDIGO}` no Firestore (`SALA.create`, `join`, `watch`, `move`, `claimTime`, `resign`, `rematch`); as regras em `firestore.rules` garantem vez, lance de 1 em 1 e relógio.
 - `js/regras.js` — regras para os dois lados (`RG.legalMoves`, `RG.legalPlacements`, `RG.inCheck(b,lado)`, `RG.pieceAt(semente,i,pesos)`) e explicações das casas proibidas (`RG.whyNot`, `RG.explain`, `RG.forbid`). O PvP usa tudo; o solo ainda tem as próprias regras e usa daqui só as explicações.
-- `js/rede.js` — login Google + ranking no Firestore; expõe `NET` (o jogo usa `window.NET`).
+- `js/rede.js` — login Google ou convidado (anônimo, só PvP) + ranking no Firestore; expõe `NET` (`NET.user` = conta Google, `NET.player` = qualquer login) e `fb()` para o `sala.js`.
 - `js/firebase-config.js` — config do projeto Firebase (vazia = só recordes locais).
 - `firestore.rules`, `firestore.indexes.json`, `firebase.json` — regras e índice do ranking.
 - `js/feedback.js` — envio de feedback por e-mail via Web3Forms (`FEEDBACK_KEY`; vazio = formulário desativado). Formulário em `index.html#feedback`.

@@ -14,18 +14,23 @@ O jogo foi feito para ensinar xadrez a um adolescente de 12 anos: cada turno é 
 - Efeitos, música procedural e falas das peças gerados pelo navegador (Web Audio e síntese de voz), sem arquivos de áudio.
 - Moedas e diamantes que aparecem ao acaso: mais pontos em troca de expor suas peças.
 - Ranking global com login pelo Google (Firebase). Dá para jogar sem conta; nesse caso a pontuação fica só no aparelho.
+- Modo contra um amigo: um tabuleiro e uma esteira compartilhada, online (sala com código de 5 letras, relógio de 1, 3 ou 5 minutos) ou no mesmo aparelho.
+- O jogo explica por que uma peça não pode ir a uma casa (casa atacada, peça cravada, rei preso).
 
 ## Estrutura
 
 | Arquivo | O que é |
 |---|---|
-| `index.html` | Página inicial: apresentação, login, níveis e ranking |
-| `jogo.html` | O jogo |
+| `index.html` | Página inicial: apresentação, escolha de modo, login, níveis e ranking |
+| `jogo.html` | O jogo solo (contra as ondas) |
+| `pvp.html` | Contra um amigo: online ou no mesmo aparelho |
+| `js/regras.js` | Regras para os dois lados e explicações das casas proibidas |
+| `js/sala.js` | Salas do PvP online no Firestore |
 | `js/pecas.js` | Desenho das peças (SVG), usado pelas duas páginas |
-| `js/rede.js` | Login com Google e ranking no Firestore |
+| `js/rede.js` | Login (Google ou convidado) e ranking no Firestore |
 | `js/firebase-config.js` | Configuração do seu projeto Firebase |
 | `js/feedback.js` | Envio do formulário de feedback por e-mail (Web3Forms) |
-| `firestore.rules` | Regras de segurança do ranking |
+| `firestore.rules` | Regras de segurança do ranking e das salas |
 | `firestore.indexes.json` | Índice usado pela consulta do ranking |
 
 Não há build nem dependências para instalar. O Firebase é carregado do CDN oficial só quando está configurado.
@@ -44,7 +49,7 @@ Depois abra `http://localhost:8000`.
 ## Configurar o ranking (Firebase)
 
 1. Em [console.firebase.google.com](https://console.firebase.google.com), crie um projeto (o plano gratuito Spark basta).
-2. **Authentication** > Começar > Método de login > ative **Google**.
+2. **Authentication** > Começar > Método de login > ative **Google** e **Anônimo** (o anônimo é o convidado do PvP online; convidado não entra no ranking).
 3. **Firestore Database** > Criar banco de dados (modo de produção).
 4. Em **Firestore** > **Regras**, cole o conteúdo de `firestore.rules` e publique.
 5. Em **Firestore** > **Índices**, crie um índice composto na coleção `scores`: `difficulty` crescente e `score` decrescente. Outra opção: abra o ranking uma vez, e o console do navegador mostra um link que cria o índice.
@@ -53,7 +58,7 @@ Depois abra `http://localhost:8000`.
 
 Com a CLI do Firebase, os passos 4 e 5 viram `firebase deploy --only firestore`.
 
-As chaves de `firebase-config.js` são públicas por natureza e podem ficar no repositório. Quem protege os dados são as regras: só quem está logado grava, cada jogador só mexe no próprio recorde, o recorde só pode subir e a pontuação precisa ser coerente com o resultado da partida.
+As chaves de `firebase-config.js` são públicas por natureza e podem ficar no repositório. Quem protege os dados são as regras: no ranking só quem entrou com Google grava, cada jogador só mexe no próprio recorde, o recorde só pode subir e a pontuação precisa ser coerente com o resultado da partida. Nas salas do PvP, só os dois jogadores gravam, só quem está na vez joga, o lance anda de 1 em 1 e a vitória por tempo é conferida pelo horário do servidor. Ninguém consegue listar as salas: só entra quem sabe o código.
 
 ### Moderação
 
