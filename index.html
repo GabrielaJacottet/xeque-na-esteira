@@ -49,8 +49,10 @@ h3{font-weight:600;font-size:1.3rem;letter-spacing:.03em}
 .btn:focus-visible,.tabs button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 
 /* abertura */
-.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:40px;align-items:center;padding:28px 0 56px}
-@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr);gap:32px;padding-top:12px}}
+.hero{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);grid-template-areas:"txt scene" "modes modes";gap:32px 40px;align-items:center;padding:28px 0 56px}
+.hero .txt{grid-area:txt}.hero .scene{grid-area:scene}.hero .modes{grid-area:modes}
+/* no celular, os modos vêm antes da cena para os botões ficarem perto do topo */
+@media (max-width:860px){.hero{grid-template-columns:minmax(0,1fr);grid-template-areas:"txt" "modes" "scene";gap:28px;padding-top:12px}}
 .eyebrow{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
 .hero h1{font-weight:800;font-size:clamp(3rem,10vw,5.6rem)}
 .hero h1 span{color:var(--gold);display:block}
@@ -58,6 +60,21 @@ h3{font-weight:600;font-size:1.3rem;letter-spacing:.03em}
 .cta{display:flex;gap:10px;flex-wrap:wrap}
 .note{font-size:.88rem;color:var(--muted);margin:12px 0 0;max-width:46ch;min-height:1.4em}
 .note.err{color:var(--danger)}
+
+/* escolha do modo */
+.modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-self:stretch}
+@media (max-width:640px){.modes{grid-template-columns:minmax(0,1fr)}}
+.mode{background:var(--panel);border:1px solid var(--line);border-top:4px solid var(--c);border-radius:12px;padding:20px;display:flex;flex-direction:column;gap:12px}
+.mode .top{display:flex;align-items:center;gap:14px}
+.mode .ics{display:flex;gap:6px;flex:none}
+.mode .ic{width:46px;height:46px;border-radius:9px;background:var(--sq-light);display:grid;place-items:center}
+.mode .ic svg{width:86%;height:86%}
+.mode .kick{font-size:.75rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 4px;display:flex;align-items:center;gap:8px}
+.mode h3{font-size:1.7rem;color:var(--c)}
+.mode>p{margin:0;color:#d6d0c2;max-width:46ch}
+.mode .cta{margin-top:auto;padding-top:4px}
+.mode .note{margin:0}
+.new{font-size:.66rem;letter-spacing:.1em;font-weight:600;background:var(--c);color:#141824;border-radius:999px;padding:2px 8px}
 
 /* cena ilustrativa */
 .scene{display:flex;flex-direction:column;gap:14px;max-width:460px;width:100%;justify-self:center}
@@ -148,12 +165,24 @@ footer{border-top:1px solid var(--line);padding:24px 0 40px;font-size:.85rem;col
 
   <main>
     <div class="hero">
-      <div>
+      <div class="txt">
         <p class="eyebrow">Jogo de xadrez para navegador</p>
         <h1>Xeque na <span>Esteira</span></h1>
-        <p class="lede">Peças aleatórias chegam por uma esteira. Ondas inimigas descem pelo tabuleiro. Use cada peça do jeito certo e proteja seu rei do xeque-mate.</p>
-        <div class="cta" id="cta"><a class="btn pri" href="jogo.html">Jogar agora</a></div>
-        <p class="note" id="ctaNote" role="status"></p>
+        <p class="lede">Peças aleatórias chegam por uma esteira. Enfrente ondas de inimigos sozinho ou dispute a mesma esteira com um amigo. Use cada peça do jeito certo e proteja seu rei do xeque-mate.</p>
+      </div>
+      <div class="modes">
+        <div class="mode" style="--c:var(--gold)">
+          <div class="top"><div class="ics"><div class="ic" data-p="k:w"></div><div class="ic" data-p="p:b"></div></div><div><p class="kick">Solo</p><h3>Contra as ondas</h3></div></div>
+          <p>Defenda o rei de 5 ondas de inimigos. Quatro níveis de dificuldade e ranking global.</p>
+          <div class="cta" id="cta"><a class="btn pri" href="jogo.html">Jogar agora</a></div>
+          <p class="note" id="ctaNote" role="status"></p>
+        </div>
+        <div class="mode" style="--c:#8fb4ff">
+          <div class="top"><div class="ics"><div class="ic" data-p="k:w"></div><div class="ic" data-p="k:b"></div></div><div><p class="kick">Dois jogadores <span class="new">Novo</span></p><h3>Contra um amigo</h3></div></div>
+          <p>Um tabuleiro e uma esteira só para os dois. Pegue a melhor peça antes do rival e dê xeque-mate.</p>
+          <div class="cta"><a class="btn pri" href="pvp.html">Jogar com um amigo</a></div>
+          <p class="note">Por enquanto, os dois jogam no mesmo aparelho. A partida online vem em breve.</p>
+        </div>
       </div>
       <div class="scene" aria-hidden="true">
         <div class="frame">

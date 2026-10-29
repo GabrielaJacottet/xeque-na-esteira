@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="description" content="Xeque na Esteira PvP: teste local das regras com esteira compartilhada.">
+<title>PvP (teste) · Xeque na Esteira</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Visual copiado de jogo.html. Temporário: quando o PvP for aprovado, o CSS comum vai para css/jogo.css. */
+:root{
+  --bg:#141824; --panel:#1e2433; --panel-2:#272f42; --line:#343d55;
+  --fg:#ece6d8; --muted:#9aa3b8;
+  --sq-light:#e8d8b8; --sq-dark:#b48a5a; --frame:#4a3826;
+  --danger:#ef5b4f; --safe:#4fb36a; --gold:#f2c14e;
+  --belt:#2a3142; --belt-stripe:#333b50;
+  --display:'Big Shoulders Display','Arial Narrow',Impact,sans-serif;
+  --body:'IBM Plex Sans',system-ui,sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 40px}
+.app{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(2rem,6vw,3rem);line-height:.95;letter-spacing:.01em;margin:0;text-transform:uppercase;text-wrap:balance}
+h1 span{color:var(--gold)}
+.sub{color:var(--muted);margin:6px 0 0;max-width:46ch}
+.tag{font-size:.75rem;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:3px 10px;vertical-align:middle}
+.top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.top a.b{font:inherit;font-weight:500;font-size:.88rem;border-radius:8px;padding:7px 12px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);text-decoration:none}
+.top a.b:hover{border-color:var(--muted)}
+.top a.b:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.main{display:grid;grid-template-columns:minmax(0,520px) minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:820px){.main{grid-template-columns:minmax(0,1fr)}}
+
+.boardwrap{display:flex;flex-direction:column;gap:14px;min-width:0}
+.frame{background:var(--frame);padding:8px;border-radius:10px;position:relative;width:100%;max-width:520px}
+.board{display:grid;grid-template-columns:repeat(8,1fr);grid-template-rows:repeat(8,1fr);aspect-ratio:1;width:100%;position:relative;border-radius:3px;overflow:hidden}
+.cell{all:unset;position:relative;display:grid;place-items:center;cursor:pointer;user-select:none}
+.cell.l{background:var(--sq-light)}.cell.d{background:var(--sq-dark)}
+.cell.last::before{content:"";position:absolute;inset:0;background:var(--gold);opacity:.3;pointer-events:none}
+.cell.zone::before{content:"";position:absolute;inset:0;background:var(--safe);opacity:.16;pointer-events:none}
+.cell.target::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:var(--safe);opacity:.85;pointer-events:none;z-index:2}
+.cell.target.cap::after{width:84%;height:84%;background:none;border:4px solid var(--safe);opacity:1}
+.cell.no::after{content:"";position:absolute;inset:24%;z-index:2;pointer-events:none;opacity:.9;
+  background:linear-gradient(45deg,transparent 43%,var(--danger) 43% 57%,transparent 57%),linear-gradient(-45deg,transparent 43%,var(--danger) 43% 57%,transparent 57%)}
+.cell.sel{box-shadow:inset 0 0 0 4px var(--gold)}
+.cell.check{box-shadow:inset 0 0 0 4px var(--danger)}
+.cell.check .pc{animation:kpulse .9s ease-in-out infinite}
+@keyframes kpulse{50%{transform:scale(1.08)}}
+.cell:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
+.pc{position:relative;z-index:1;width:100%;height:100%;display:grid;place-items:center}
+.pc svg{width:92%;height:92%;display:block;overflow:visible;filter:drop-shadow(0 2px 0 rgba(0,0,0,.3))}
+.pc.fresh{animation:drop .4s ease-out}
+@keyframes drop{from{transform:translateY(-40%);opacity:0}to{transform:none;opacity:1}}
+.files{display:grid;grid-template-columns:repeat(8,1fr);font-size:.7rem;color:var(--muted);text-align:center;letter-spacing:.08em;padding:0 8px}
+
+.belt{background:repeating-linear-gradient(115deg,var(--belt) 0 14px,var(--belt-stripe) 14px 24px);background-size:200% 100%;border-radius:12px;padding:10px 34px;position:relative;display:grid;grid-template-columns:repeat(5,1fr);gap:8px;border:1px solid var(--line);max-width:520px;animation:run 6s linear infinite}
+@keyframes run{to{background-position:-100% 0}}
+.belt::before,.belt::after{content:"";position:absolute;top:50%;width:18px;height:18px;margin-top:-9px;border-radius:50%;background:conic-gradient(#5b6585 0 25%,#3a4158 0 50%,#5b6585 0 75%,#3a4158 0);animation:spin 1.2s linear infinite}
+@keyframes spin{to{transform:rotate(1turn)}}
+.belt::before{left:9px}.belt::after{right:9px}
+.slot{all:unset;aspect-ratio:1/0.82;border-radius:8px;background:var(--sq-light);display:grid;place-items:center;cursor:pointer;position:relative;transition:transform .15s}
+.slot:hover:not(:disabled){transform:translateY(-3px)}
+.slot:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.slot.empty{background:transparent;border:2px dashed var(--line);cursor:default}
+.slot.sel{box-shadow:0 0 0 3px var(--safe);transform:translateY(-3px)}
+.slot.edge{background:#d9c7a3}
+.slot.edge::after{content:"cai";position:absolute;top:-9px;left:50%;transform:translateX(-50%);font-size:.62rem;letter-spacing:.1em;text-transform:uppercase;background:var(--danger);color:#fff;padding:1px 6px;border-radius:999px}
+.slot:disabled{cursor:default}
+.slot .pc svg{width:76%;height:92%}
+.slot.arrive{animation:arrive .45s cubic-bezier(.2,.9,.3,1.2)}
+@keyframes arrive{from{transform:translateX(160%);opacity:0}}
+.fall{position:absolute;left:4px;top:8px;width:44px;height:44px;animation:fall .7s ease-in forwards;pointer-events:none}
+.fall svg{width:100%;height:100%}
+@keyframes fall{to{transform:translate(-24px,90px) rotate(-120deg);opacity:0}}
+.beltcap{display:flex;justify-content:space-between;font-size:.78rem;color:var(--muted);max-width:520px;gap:12px}
+
+aside{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card h2{font-family:var(--display);font-weight:600;font-size:1.25rem;letter-spacing:.03em;text-transform:uppercase;margin:0}
+.row{display:flex;justify-content:space-between;align-items:center;gap:10px;font-variant-numeric:tabular-nums}
+.muted{color:var(--muted);font-size:.85rem}
+.status{border-left:4px solid var(--gold);padding:12px 14px;background:var(--panel-2)}
+.status.warn{border-left-color:var(--danger)}
+.status.good{border-left-color:var(--safe)}
+.status p{margin:0}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button.b{font:inherit;font-weight:500;border-radius:8px;padding:9px 14px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);cursor:pointer}
+button.b:hover:not(:disabled){border-color:var(--muted)}
+button.b:disabled{opacity:.45;cursor:default}
+button.b.pri{background:var(--gold);color:#241c08;border-color:transparent}
+button.b:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+label.tg{display:flex;align-items:center;gap:8px;font-size:.88rem;cursor:pointer}
+label.tg input{accent-color:var(--gold);width:16px;height:16px}
+
+.player{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;background:var(--panel-2);border:2px solid transparent}
+.player .who{display:flex;flex-direction:column;line-height:1.3}
+.player.on{border-color:var(--gold)}
+.player .dot{width:14px;height:14px;border-radius:50%;border:2px solid #000}
+.dot.w{background:#f3ead6}.dot.b{background:#a3303f}
+.clock{font-family:var(--display);font-weight:800;font-size:1.6rem;line-height:1;font-variant-numeric:tabular-nums}
+.clock.low{color:var(--danger)}
+.fld{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:.88rem;flex-wrap:wrap}
+.fld select,.fld input{font:inherit;font-size:.88rem;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.fld input{width:10ch}
+.fld select:focus-visible,.fld input:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+ol.log{margin:0;padding-left:0;list-style:none;display:flex;flex-direction:column;gap:4px;max-height:220px;overflow:auto;font-size:.86rem;font-variant-numeric:tabular-nums}
+ol.log b{font-weight:600}
+ol.how{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:.86rem}
+ol.how b{color:var(--fg);font-weight:500}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div>
+      <h1>Xeque na <span>Esteira</span> <span class="tag">PvP · teste local</span></h1>
+      <p class="sub">Dois jogadores no mesmo aparelho, um tabuleiro e uma esteira compartilhada. Serve para testar as regras antes do modo online.</p>
+    </div>
+    <nav class="top"><a class="b" href="./">← Início</a><a class="b" href="jogo.html">Jogo solo</a></nav>
+  </header>
+
+  <div class="main">
+    <div class="boardwrap">
+      <div class="frame"><div class="board" id="board" role="grid" aria-label="Tabuleiro"></div></div>
+      <div class="files" id="files" aria-hidden="true"></div>
+      <div class="belt" id="belt" aria-label="Esteira compartilhada"></div>
+      <div class="beltcap"><span>← a peça da esquerda cai quando a esteira lota</span><span>a peça vira da cor de quem pega</span></div>
+    </div>
+
+    <aside>
+      <div class="status" id="status" aria-live="polite"><p id="msg"></p></div>
+
+      <div class="card">
+        <div class="row"><h2>Partida</h2><span class="muted" id="turn"></span></div>
+        <div class="player" id="pw"><span class="dot w"></span><span class="who"><b>Brancas</b><span class="muted" id="mw"></span></span><span class="clock" id="cw"></span></div>
+        <div class="player" id="pb"><span class="dot b"></span><span class="who"><b>Pretas</b><span class="muted" id="mb"></span></span><span class="clock" id="cb"></span></div>
+        <div class="btns">
+          <button class="b" id="pass" type="button">Passar a vez</button>
+          <button class="b" id="undo" type="button">Desfazer</button>
+          <button class="b" id="restart" type="button">Nova partida</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Ajustes do teste</h2>
+        <p class="muted" style="margin:0">Valem a partir da próxima partida. Mesma semente, mesma sequência de peças na esteira.</p>
+        <label class="fld">Início <select id="sStart"><option value="k">Só o rei</option><option value="kp">Rei + 2 peões</option></select></label>
+        <label class="fld">Peças na esteira no início <select id="sBelt"><option value="3">3</option><option value="5" selected>5</option></select></label>
+        <label class="fld">Relógio de cada jogador <select id="sClock"><option value="0">Sem relógio</option><option value="60">1 minuto</option><option value="180">3 minutos</option><option value="300">5 minutos</option></select></label>
+        <label class="fld">Limite de turnos <select id="sLimit"><option value="20">20 cada</option><option value="40" selected>40 cada</option><option value="60">60 cada</option></select></label>
+        <div class="fld"><label for="sSeed">Semente da esteira</label><span><input id="sSeed" inputmode="numeric" autocomplete="off"> <button class="b" id="reseed" type="button" style="padding:6px 10px">Sortear</button></span></div>
+        <label class="tg"><input type="checkbox" id="sPass"> Permitir passar a vez</label>
+        <label class="tg"><input type="checkbox" id="optFlip"> Virar o tabuleiro na vez das pretas</label>
+        <label class="tg"><input type="checkbox" id="optHints" checked> Mostrar lances possíveis (as casas proibidas continuam com X)</label>
+        <button class="b pri" id="newGame" type="button">Nova partida com estes ajustes</button>
+      </div>
+
+      <div class="card">
+        <h2>Lances</h2>
+        <ol class="log" id="log"></ol>
+      </div>
+
+      <div class="card">
+        <h2>Como jogar</h2>
+        <ol class="how">
+          <li>As brancas começam. Em cada vez, faça <b>uma ação</b>: pegue uma peça da esteira e coloque na sua área (as 3 fileiras do seu lado) ou mova uma peça sua.</li>
+          <li>A esteira é <b>a mesma para os dois</b>. A cada lance entra uma peça nova; se lotar, a da esquerda cai.</li>
+          <li>Vence quem der <b>xeque-mate</b>. Colocar uma peça na frente do rei também tira do xeque.</li>
+          <li>No fim do limite de turnos, vence quem tiver <b>mais material</b> no tabuleiro: peão 1, cavalo e bispo 3, torre 5, rainha 9.</li>
+          <li>Sem lance e sem xeque é <b>afogamento</b>: empate. Com relógio, quem zerar o tempo perde.</li>
+        </ol>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<script src="js/pecas.js"></script>
+<script src="js/regras.js"></script>
+<script>
+const NAME={p:'peão',n:'cavalo',b:'bispo',r:'torre',q:'rainha',k:'rei'};
+const ART={p:'o',n:'o',b:'o',r:'a',q:'a',k:'o'};
+const SIDE={w:'brancas',b:'pretas'};
+const WEIGHTS=[['p',34],['n',20],['b',20],['r',17],['q',9]];  // mesmos pesos do nível Normal
+const BELT_MAX=5;
+const $=id=>document.getElementById(id);
+const sq=(r,c)=>'abcdefgh'[c]+(8-r);
+const up=s=>s[0].toUpperCase()+s.slice(1);
+const randSeed=()=>Math.floor(Math.random()*1e6);
+let S=null;
+
+/* Estado que o Desfazer guarda (no online, é isto que vai para o Firestore). */
+const snap=()=>JSON.parse(JSON.stringify({board:S.board,belt:S.belt,drawn:S.drawn,toMove:S.toMove,ply:S.ply,left:S.left,last:S.last,log:S.log}));
+
+function newGame(){
+  let seed=parseInt($('sSeed').value,10);if(!(seed>=0)){seed=randSeed();$('sSeed').value=seed}
+  const b=RG.empty();
+  b[7][4]={t:'k',side:'w'};b[0][4]={t:'k',side:'b'};
+  if($('sStart').value==='kp'){b[6][3]={t:'p',side:'w'};b[6][5]={t:'p',side:'w'};b[1][3]={t:'p',side:'b'};b[1][5]={t:'p',side:'b'}}
+  const clock=+$('sClock').value*1000;
+  S={board:b,belt:[],seed,drawn:0,toMove:'w',ply:0,limit:+$('sLimit').value,clock,left:{w:clock,b:clock},pass:$('sPass').checked,
+     sel:null,targets:[],last:null,log:[],hist:[],over:null,fell:null,arrive:false,msg:''};
+  for(let i=+$('sBelt').value;i>0;i--)S.belt.push(RG.pieceAt(seed,S.drawn++,WEIGHTS));
+  startTurn();
+}
+
+/* O que o jogador ainda pode fazer quando o rei está preso (entra nas explicações de RG.explain). */
+const otherMoves=side=>{let ok=false;RG.each(S.board,side,(q,a,d)=>{if(!ok&&q.t!=='k'&&RG.legalMoves(S.board,a,d).length)ok=true});return ok};
+const stillCanPlay=side=>RG.list([
+  ...(S.belt.some(t=>RG.legalPlacements(S.board,t,side).length)?['coloque uma peça da esteira']:[]),
+  ...(otherMoves(side)?['mova outra peça']:[]),...(S.pass?['passe a vez']:[])],'ou');
+/* Clique numa casa onde a peça selecionada não pode ir. */
+function invalidMsg(r,c){
+  if(S.sel.kind==='belt'){
+    if(!RG.zone(S.toMove).includes(r))return'Peças da esteira só entram nas suas 3 fileiras (área verde).';
+    return S.board[r][c]?'Essa casa já está ocupada.':'Aí não: seu rei continuaria em xeque.';
+  }
+  const p=S.board[S.sel.r][S.sel.c],w=RG.whyNot(S.board,S.sel.r,S.sel.c).find(x=>x.to[0]===r&&x.to[1]===c);
+  return w?`Aí não: ${RG.forbid(S.board,w,p.t==='k')}.`:`${up(ART[p.t])} ${NAME[p.t]} não se move assim.`;
+}
+
+function startTurn(){
+  const side=S.toMove,chk=RG.inCheck(S.board,side),any=RG.hasAnyLegal(S.board,S.belt,side);
+  S.over=null;S.sel=null;S.targets=[];S.bad=false;
+  if(!any&&chk)finish(RG.opp(side),'mate');
+  else if(S.ply>=S.limit*2){const mw=RG.material(S.board,'w'),mb=RG.material(S.board,'b');finish(mw>mb?'w':mb>mw?'b':null,'limite')}
+  else if(!any&&!S.pass)finish(null,'afogamento');
+  else{
+    const fell=S.fell?`${up(ART[S.fell])} ${NAME[S.fell]} caiu da esteira. `:'';
+    const k=RG.kingPos(S.board,side),stuck=!chk&&k&&!RG.legalMoves(S.board,k[0],k[1]).length;
+    S.msg=S.turnMsg=fell+(chk?`Xeque nas ${SIDE[side]}! Tire o rei do ataque, bloqueie (pode ser colocando uma peça) ou capture o atacante.`
+      :!any?`As ${SIDE[side]} não têm lance. Passem a vez.`
+      :stuck?`Vez das ${SIDE[side]}. O rei está preso, mas não está em xeque: ${stillCanPlay(side)}. No xadrez comum, sem nenhum outro lance, isso seria afogamento (empate).`
+      :`Vez das ${SIDE[side]}: coloque uma peça da esteira na sua área ou mova uma peça sua.`);
+  }
+  render();
+}
+
+function finish(winner,why){
+  S.over={winner,why};S.sel=null;S.targets=[];
+  const W=winner?up(SIDE[winner]):'',mw=RG.material(S.board,'w'),mb=RG.material(S.board,'b');
+  if(why==='mate')S.msg=`Xeque-mate! ${W} vencem.`;
+  else if(why==='tempo')S.msg=`O tempo das ${SIDE[RG.opp(winner)]} acabou. ${W} vencem.`;
+  else if(why==='afogamento')S.msg=`Afogamento: as ${SIDE[S.toMove]} não têm lance e não estão em xeque. Empate.`;
+  else S.msg=winner?`Fim dos ${S.limit} turnos. ${W} vencem por material (${mw} × ${mb}).`:`Fim dos ${S.limit} turnos. Empate em material (${mw} × ${mb}).`;
+}
+
+/* Uma ação do jogador da vez: colocar, mover ou passar. Depois dela a esteira anda uma casa. */
+function act(kind,d){
+  S.hist.push(snap());
+  const side=S.toMove;let txt;
+  if(kind==='place'){
+    const t=S.belt.splice(d.i,1)[0];S.board[d.r][d.c]={t,side,fresh:true};
+    txt=`colocou ${ART[t]} ${NAME[t]} em ${sq(d.r,d.c)}`;S.last=[[d.r,d.c]];
+  }else if(kind==='move'){
+    const t=S.board[d.fr][d.fc].t,cap=RG.apply(S.board,d.fr,d.fc,d.r,d.c);
+    txt=`${NAME[t]} ${sq(d.fr,d.fc)}–${sq(d.r,d.c)}${cap?`, captura ${ART[cap.t]} ${NAME[cap.t]}`:''}${t==='p'&&S.board[d.r][d.c].t==='q'?', vira rainha':''}`;
+    S.last=[[d.fr,d.fc],[d.r,d.c]];
+  }else{txt='passou a vez';S.last=null}
+  const nt=RG.pieceAt(S.seed,S.drawn++,WEIGHTS);
+  S.fell=S.belt.length>=BELT_MAX?S.belt.shift():null;
+  S.belt.push(nt);S.arrive=true;
+  S.log.push({n:Math.floor(S.ply/2)+1,side,txt:txt+(S.fell?` (${ART[S.fell]} ${NAME[S.fell]} caiu)`:'')});
+  S.ply++;S.toMove=RG.opp(side);
+  startTurn();
+}
+
+function clickCell(r,c){
+  if(S.over)return;
+  const p=S.board[r][c],side=S.toMove;
+  if(S.sel&&S.targets.some(([a,d])=>a===r&&d===c)){
+    if(S.sel.kind==='belt')act('place',{i:S.sel.i,r,c});else act('move',{fr:S.sel.r,fc:S.sel.c,r,c});
+    return;
+  }
+  S.msg=S.turnMsg;S.bad=false;
+  if(p&&p.side===side){
+    if(S.sel?.kind==='piece'&&S.sel.r===r&&S.sel.c===c){S.sel=null;S.targets=[]}
+    else{S.sel={kind:'piece',r,c};S.targets=RG.legalMoves(S.board,r,c);S.msg=RG.explain(S.board,r,c,stillCanPlay(side))||S.turnMsg}
+  }else if(S.sel){S.msg=invalidMsg(r,c);S.bad=true}
+  else if(p)S.msg=`Essa peça é das ${SIDE[p.side]}. Agora é a vez das ${SIDE[side]}.`;
+  render();
+}
+function clickSlot(i){
+  if(S.over||i>=S.belt.length)return;
+  S.msg=S.turnMsg;S.bad=false;
+  if(S.sel?.kind==='belt'&&S.sel.i===i){S.sel=null;S.targets=[]}
+  else{S.sel={kind:'belt',i};S.targets=RG.legalPlacements(S.board,S.belt[i],S.toMove);if(!S.targets.length)S.msg='Não há onde colocar essa peça sem deixar o rei em xeque.'}
+  render();
+}
+
+function render(){
+  const side=S.toMove,flip=$('optFlip').checked&&side==='b';
+  /* Com "Mostrar lances possíveis" desligado somem as bolinhas verdes; o X das casas proibidas continua. */
+  const tg=new Set($('optHints').checked?S.targets.map(([a,d])=>a*8+d):[]),zr=S.sel?.kind==='belt'?RG.zone(side):[];
+  const selP=S.sel?.kind==='piece'?S.board[S.sel.r][S.sel.c]:null;
+  const no=new Map((selP?RG.whyNot(S.board,S.sel.r,S.sel.c):[]).map(w=>[w.to[0]*8+w.to[1],w]));
+  const chk=RG.inCheck(S.board,side),k=RG.kingPos(S.board,side);
+  let h='';
+  for(let vr=0;vr<8;vr++)for(let vc=0;vc<8;vc++){
+    const r=flip?7-vr:vr,c=flip?7-vc:vc,p=S.board[r][c],cls=['cell',(r+c)%2?'d':'l'];
+    if(zr.includes(r))cls.push('zone');
+    if(S.last&&S.last.some(([a,d])=>a===r&&d===c))cls.push('last');
+    if(tg.has(r*8+c)){cls.push('target');if(p)cls.push('cap')}
+    const w=no.get(r*8+c);if(w)cls.push('no');
+    if(S.sel?.kind==='piece'&&S.sel.r===r&&S.sel.c===c)cls.push('sel');
+    if(chk&&k&&k[0]===r&&k[1]===c)cls.push('check');
+    const pc=p?`<span class="pc${p.fresh?' fresh':''}">${pieceSVG(p.t,p.side)}</span>`:'';
+    const tip=w?`proibida: ${RG.forbid(S.board,w,selP.t==='k')}`:'';
+    h+=`<button class="${cls.join(' ')}" data-r="${r}" data-c="${c}"${tip?` title="${tip}"`:''} aria-label="${sq(r,c)}, ${p?`${NAME[p.t]} das ${SIDE[p.side]}`:'vazia'}${tip?`, ${tip}`:''}">${pc}</button>`;
+  }
+  $('board').innerHTML=h;
+  for(const s of['w','b'])RG.each(S.board,s,p=>delete p.fresh);
+  $('files').innerHTML=[...(flip?'hgfedcba':'abcdefgh')].map(x=>`<span>${x}</span>`).join('');
+
+  let bh='';
+  for(let i=0;i<BELT_MAX;i++){
+    const t=S.belt[i];
+    if(!t){bh+='<button class="slot empty" type="button" disabled aria-label="espaço vazio"></button>';continue}
+    const cls=['slot'];if(S.sel?.kind==='belt'&&S.sel.i===i)cls.push('sel');if(S.arrive&&i===S.belt.length-1)cls.push('arrive');if(i===0&&S.belt.length>=BELT_MAX)cls.push('edge');
+    bh+=`<button class="${cls.join(' ')}" type="button" data-i="${i}"${S.over?' disabled':''} aria-label="${NAME[t]} na esteira"><span class="pc">${pieceSVG(t,side)}</span></button>`;
+  }
+  if(S.fell&&S.arrive)bh+=`<span class="fall" aria-hidden="true">${pieceSVG(S.fell,RG.opp(side))}</span>`;
+  $('belt').innerHTML=bh;S.arrive=false;
+
+  $('status').className='status'+(S.over?(S.over.winner?' good':''):chk||S.bad?' warn':'');
+  $('msg').textContent=S.msg;
+  $('turn').textContent=`Turno ${Math.min(S.limit,Math.floor(S.ply/2)+1)} de ${S.limit}`;
+  for(const s of['w','b']){$('p'+s).classList.toggle('on',!S.over&&side===s);$('m'+s).textContent=`material ${RG.material(S.board,s)}`}
+  renderClocks();
+  $('undo').disabled=!S.hist.length;
+  $('pass').hidden=!S.pass;$('pass').disabled=!!S.over||chk;
+  $('log').innerHTML=S.log.map(e=>`<li><b>${e.n}. ${up(SIDE[e.side])}:</b> ${e.txt}</li>`).join('')||'<li class="muted">Nenhum lance ainda.</li>';
+  $('log').scrollTop=$('log').scrollHeight;
+}
+function renderClocks(){
+  for(const s of['w','b']){
+    const el=$('c'+s);el.hidden=!S.clock;if(!S.clock)continue;
+    const ms=Math.max(0,S.left[s]),t=Math.ceil(ms/1000);
+    el.textContent=`${Math.floor(t/60)}:${String(t%60).padStart(2,'0')}`;el.classList.toggle('low',ms<20000);
+  }
+}
+
+/* Relógio: desconta o tempo de quem está na vez. */
+let lastTick=performance.now();
+setInterval(()=>{
+  const now=performance.now(),dt=now-lastTick;lastTick=now;
+  if(!S||S.over||!S.clock)return;
+  S.left[S.toMove]-=dt;
+  if(S.left[S.toMove]<=0){S.left[S.toMove]=0;finish(RG.opp(S.toMove),'tempo');render()}
+  else renderClocks();
+},200);
+
+$('board').addEventListener('click',e=>{const t=e.target.closest('.cell');if(t)clickCell(+t.dataset.r,+t.dataset.c)});
+$('belt').addEventListener('click',e=>{const t=e.target.closest('.slot');if(t&&!t.disabled)clickSlot(+t.dataset.i)});
+$('pass').onclick=()=>{if(!S.over&&S.pass&&!RG.inCheck(S.board,S.toMove))act('pass')};
+$('undo').onclick=()=>{if(!S.hist.length)return;Object.assign(S,S.hist.pop());S.fell=null;startTurn()};
+$('restart').onclick=$('newGame').onclick=newGame;
+$('reseed').onclick=()=>{$('sSeed').value=randSeed()};
+$('optFlip').onchange=()=>render();
+/* Mesma preferência do jogo solo (xne-hints). */
+try{$('optHints').checked=localStorage.getItem('xne-hints')!=='0'}catch(e){}
+$('optHints').onchange=()=>{try{localStorage.setItem('xne-hints',$('optHints').checked?'1':'0')}catch(e){}render()};
+$('sSeed').value=randSeed();
+newGame();
+</script>
+</body>
+</html>

@@ -3,9 +3,11 @@
 Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças inimigas usando peças aleatórias que chegam por uma esteira. Feito para ensinar xadrez a um adolescente de 12 anos; vai para o portfólio do autor. Publicado no GitHub Pages, com ranking no Firebase.
 
 ## Arquivos
-- `index.html` — página inicial (apresentação, login, níveis, ranking).
+- `index.html` — página inicial (apresentação, escolha de modo: solo ou contra um amigo, login, níveis, ranking).
 - `jogo.html` — o jogo inteiro (HTML + CSS + JS, sem build).
 - `js/pecas.js` — desenho das peças (SVG), usado pelas duas páginas.
+- `pvp.html` — PvP em teste local (dois jogadores no mesmo aparelho, esteira compartilhada, ajustes de teste). Ligado pelo cartão "Contra um amigo" da página inicial; o modo online ainda não existe.
+- `js/regras.js` — regras para os dois lados (`RG.legalMoves`, `RG.legalPlacements`, `RG.inCheck(b,lado)`, `RG.pieceAt(semente,i,pesos)`) e explicações das casas proibidas (`RG.whyNot`, `RG.explain`, `RG.forbid`). O PvP usa tudo; o solo ainda tem as próprias regras e usa daqui só as explicações.
 - `js/rede.js` — login Google + ranking no Firestore; expõe `NET` (o jogo usa `window.NET`).
 - `js/firebase-config.js` — config do projeto Firebase (vazia = só recordes locais).
 - `firestore.rules`, `firestore.indexes.json`, `firebase.json` — regras e índice do ranking.
@@ -38,6 +40,7 @@ Jogo de xadrez para navegador: o jogador defende o rei contra ondas de peças in
 | Fluxo do turno | `function startTurn`, `function endPlayer`, `async function enemyTurn` |
 | Ondas e vitória | `function spawn`, `function checkWave` |
 | Cliques | `function clickCell`, `function clickSlot` |
+| Lances possíveis e casas proibidas (X) | `optHints` / `optH` (preferência `xne-hints`, comum com o PvP), `function canPlay`, `RG.explain` em `clickCell`, `RG.forbid` em `invalidAt` |
 | Renderização | `function render` (tabuleiro, esteira, painel, telas de menu/fim) |
 
 ## Regras do jogo (resumo)

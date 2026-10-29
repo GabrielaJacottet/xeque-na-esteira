@@ -44,6 +44,8 @@ h1 span{color:var(--gold)}
 .cell.threat::after{content:"";position:absolute;inset:0;background:var(--danger);opacity:.28;pointer-events:none}
 .cell.target::after{content:"";position:absolute;width:30%;height:30%;border-radius:50%;background:var(--safe);opacity:.85;pointer-events:none}
 .cell.target.cap::after{width:84%;height:84%;background:none;border:4px solid var(--safe);opacity:1}
+.cell.no::after{content:"";position:absolute;inset:24%;z-index:2;pointer-events:none;opacity:.9;
+  background:linear-gradient(45deg,transparent 43%,var(--danger) 43% 57%,transparent 57%),linear-gradient(-45deg,transparent 43%,var(--danger) 43% 57%,transparent 57%)}
 .cell.sel{box-shadow:inset 0 0 0 4px var(--gold)}
 .cell.check{box-shadow:inset 0 0 0 4px var(--danger)}
 .cell:focus-visible{outline:3px solid var(--gold);outline-offset:-3px}
@@ -248,6 +250,7 @@ ol.how b{color:var(--fg);font-weight:500}
           <button class="b icon-btn" id="music" type="button" aria-pressed="false">Música: ligada</button>
         </div>
         <label class="tg"><input type="checkbox" id="optArrows" checked> Mostrar intenção dos inimigos</label>
+        <label class="tg"><input type="checkbox" id="optHints" checked> Mostrar lances possíveis (as casas proibidas continuam com X)</label>
         <label class="tg"><input type="checkbox" id="optThreat"> Mostrar casas atacadas</label>
         <label class="tg"><input type="checkbox" id="optZoa" checked> Comemorações e zoação (sons e vozes)</label>
         <div class="row"><span class="muted">Dificuldade</span><button class="b" id="diffBtn" type="button" style="padding:5px 12px">Normal</button></div>
@@ -282,6 +285,7 @@ ol.how b{color:var(--fg);font-weight:500}
 </div>
 
 <script src="js/pecas.js"></script>
+<script src="js/regras.js"></script>
 <script>
 const glyph=(t,side='w')=>pieceSVG(t,side);
 const NAME={p:'peão',n:'cavalo',b:'bispo',r:'torre',q:'rainha',k:'rei'};
@@ -482,8 +486,8 @@ function invalidAt(r,c){
     else if(S.board[r][c])why='Essa casa já está ocupada.';
     else why='Aí não: seu rei ficaria em xeque.';
   }else{
-    const p=S.board[S.sel.r][S.sel.c],ok=moves(S.board,S.sel.r,S.sel.c,false).some(([a,d])=>a===r&&d===c);
-    why=ok?'Esse movimento deixaria seu rei em xeque.':`${ART[p.t]} não se move assim.`;
+    const p=S.board[S.sel.r][S.sel.c],w=RG.whyNot(S.board,S.sel.r,S.sel.c).find(x=>x.to[0]===r&&x.to[1]===c);
+    why=w?`Aí não: ${RG.forbid(S.board,w,p.t==='k')}.`:`${ART[p.t]} não se move assim.`;
   }
   S.msg=why;S.bad=true;sfx('error');shake();spawnFx('nope',`left:${c*12.5}%;top:${r*12.5}%`,'✕',800);render();
 }
@@ -858,10 +862,15 @@ function clickCell(r,c){
   }
   if(p&&p.side==='w'){
     if(S.sel?.kind==='piece'&&S.sel.r===r&&S.sel.c===c){S.sel=null;S.targets=[]}
-    else{S.sel={kind:'piece',r,c};S.targets=legalMoves(r,c);sfx('select');if(!S.targets.length)S.msg=`Essa peça (${NAME[p.t]}) não tem jogadas legais agora.`}
+    else{S.sel={kind:'piece',r,c};S.targets=legalMoves(r,c);sfx('select');const why=RG.explain(S.board,r,c,canPlay());if(why)S.msg=why}
   }else if(S.sel){invalidAt(r,c);return}
   else{S.sel=null;S.targets=[]}
   render();
+}
+/* O que ainda dá para fazer quando o rei está preso sem xeque (entra na explicação de RG.explain). */
+function canPlay(){
+  let other=false;each(S.board,'w',(q,a,d)=>{if(!other&&q.t!=='k'&&legalMoves(a,d).length)other=true});
+  return RG.list([...(S.belt.some(t=>legalPlacements(t).length)?['coloque uma peça da esteira']:[]),...(other?['mova outra peça']:[]),'passe a vez'],'ou');
 }
 function clickSlot(i){
   if(S.phase!=='player'||busy||i>=S.belt.length)return;
@@ -878,6 +887,10 @@ document.getElementById('pass').onclick=()=>{if(S.phase==='player'&&!busy&&!inCh
 document.getElementById('undo').onclick=undo;
 document.getElementById('restart').onclick=()=>{if(!busy)newGame()};
 optA.onchange=optT.onchange=()=>render();
+/* Lances possíveis (bolinhas verdes): preferência comum com o PvP. */
+const optH=document.getElementById('optHints');
+try{optH.checked=localStorage.getItem('xne-hints')!=='0'}catch(e){}
+optH.onchange=()=>{try{localStorage.setItem('xne-hints',optH.checked?'1':'0')}catch(e){}render()};
 const muteBtn=document.getElementById('mute');
 function syncMute(){muteBtn.textContent=muted?'Som: desligado':'Som: ligado';muteBtn.setAttribute('aria-pressed',String(muted))}
 muteBtn.onclick=()=>{muted=!muted;if(muted){try{speechSynthesis.cancel()}catch(e){}}try{localStorage.setItem('xne-mute',muted?'1':'0')}catch(e){}syncMute();if(!muted)sfx('select')};
@@ -893,7 +906,10 @@ function showBanner(txt){const d=document.createElement('div');d.className='bann
 function render(){
   const threat=new Set();
   if(optT.checked)each(S.board,'b',(p,r,c)=>moves(S.board,r,c,true).forEach(([a,d])=>threat.add(a*8+d)));
-  const tg=new Set(S.targets.map(([a,d])=>a*8+d));
+  /* Sem "Mostrar lances possíveis" somem as bolinhas verdes; o X das casas proibidas continua. */
+  const tg=new Set(optH.checked?S.targets.map(([a,d])=>a*8+d):[]);
+  const selP=S.sel?.kind==='piece'?S.board[S.sel.r][S.sel.c]:null;
+  const no=new Map((selP?RG.whyNot(S.board,S.sel.r,S.sel.c):[]).map(w=>[w.to[0]*8+w.to[1],w]));
   const chk=inCheck(S.board),k=kingPos(S.board);
   let h='';
   for(let r=0;r<8;r++)for(let c=0;c<8;c++){
@@ -902,6 +918,7 @@ function render(){
     if(S.sel?.kind==='belt'&&r>=ZONE)cls.push('zone');
     if(threat.has(r*8+c))cls.push('threat');
     if(tg.has(r*8+c)){cls.push('target');if(p)cls.push('cap')}
+    const w=no.get(r*8+c);if(w)cls.push('no');
     if(S.sel?.kind==='piece'&&S.sel.r===r&&S.sel.c===c)cls.push('sel');
     if(chk&&k&&k[0]===r&&k[1]===c)cls.push('check');
     const A=S.anim&&S.anim.to[0]===r&&S.anim.to[1]===c?S.anim:null;
@@ -911,7 +928,8 @@ function render(){
     const it=!p&&S.item&&S.item.r===r&&S.item.c===c?S.item:null;
     const pc=p?`<span class="pc ${p.side==='w'?(p.t==='k'?'k':'w'):'b'}${p.fresh?' fresh':''}${ac2}${dn}${ch}"${st}>${glyph(p.t,p.side)}</span>`:it?`<span class="item ${it.k}${it.ttl===1?' last':''}">${itemSVG(it.k)}<i>${it.ttl}</i></span>`:'';
     const lab=p?`${p.side==='w'?'sua':'inimiga'} ${NAME[p.t]}`:it?`${ITEMS[it.k].name}, vale ${itemVal(it.k)} pontos, some em ${it.ttl} turnos`:'vazia';
-    h+=`<button class="${cls.join(' ')}" data-r="${r}" data-c="${c}" aria-label="${'abcdefgh'[c]}${8-r}, ${lab}">${pc}</button>`;
+    const tip=w?`proibida: ${RG.forbid(S.board,w,selP.t==='k')}`:'';
+    h+=`<button class="${cls.join(' ')}" data-r="${r}" data-c="${c}"${tip?` title="${tip}"`:''} aria-label="${'abcdefgh'[c]}${8-r}, ${lab}${tip?`, ${tip}`:''}">${pc}</button>`;
   }
   optA.disabled=!D().arrows;
   if(optA.checked&&D().arrows&&S.plan.length){
